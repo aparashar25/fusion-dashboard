@@ -1,0 +1,878 @@
+[
+{
+"row": 1,
+"a": "CLAUDE HANDOFF \u2014 LoanAmerica FUSION LOANS model (v4, Fusion-only): living documentation & project log",
+"b": "",
+"c": ""
+},
+{
+"row": 2,
+"a": "Last updated: 2026-10-28. READ THIS TAB FIRST in every session; it is the single source of truth for what the workbook does and what is pending.",
+"b": "",
+"c": ""
+},
+{
+"row": 4,
+"a": "0. HOW TO USE THIS TAB",
+"b": "",
+"c": ""
+},
+{
+"row": 5,
+"a": "Purpose",
+"b": "Lets any new Claude session (or person) get up to speed: what the Fusion model does, where every input/output lives, what has been verified, what is open.",
+"c": ""
+},
+{
+"row": 6,
+"a": "Session start",
+"b": "Read this tab fully; then confirm where things stand with the user before changing anything.",
+"c": ""
+},
+{
+"row": 7,
+"a": "After any change",
+"b": "Append a Change Log row (section 11: date, change, verified?) and update any affected section (tab map, settings, outputs, open items).",
+"c": ""
+},
+{
+"row": 8,
+"a": "Naming",
+"b": "Use 'Loan America' (not 'Link'). Parties: investors OCM + Loan America (SPV); originator Loan America; servicer Goal; counterparty = school.",
+"c": ""
+},
+{
+"row": 9,
+"a": "Conventions",
+"b": "Blue cells on F1 = inputs; black = formulas. Only F1 (and Sheet3, user's scenario table) hold inputs \u2014 never type over formulas on F2-F5. Per-$1 views are per $1 of loan face.",
+"c": ""
+},
+{
+"row": 10,
+"a": "History",
+"b": "v4 (2026-10-28) = Fusion-only copy. The traditional FICO model (tabs 1 Program Assumptions \u2026 10 Loss Curves, data tabs) was deleted here after confirming Fusion has no links to it; it remains in earlier versions (e.g. 'LoanAmerica_Model 2026.10.21' v2/v3). Fusion base curves were copied from FICO grade G on 2026-10-28.",
+"c": ""
+},
+{
+"row": 12,
+"a": "1. WHAT THE MODEL IS",
+"b": "",
+"c": ""
+},
+{
+"row": 13,
+"a": "Product",
+"b": "Fusion loans: cash-flow-underwritten student loans for thin-file borrowers at schools with internal payment plans. Investor pays the school an advance (A% of face) at month 0 + upfront fees; across-life fees (Goal servicing) come off the top of collections; remaining net collections split investor / school by tiered targets (MOIC or IRR), tested per term within each monthly vintage.",
+"c": ""
+},
+{
+"row": 14,
+"a": "Flow",
+"b": "F1 inputs \u2192 F2 per-$1 engine by term (24/36/48/60m) + blended \u2192 F2a gross (pre-fee) vs net asset returns \u2192 F3 pool (stacks monthly vintages, other SPV fees, leverage, recycling) \u2192 F4 SPV (OCM / Loan America capital split + promote waterfall, returns) \u2192 F5 dashboard.",
+"c": ""
+},
+{
+"row": 15,
+"a": "Credit",
+"b": "Grade G curves: 24m & 36m use the short curve, 48m & 60m the long curve, each stopped at its own term (24m sits on the short curve to month 24; 48m on the long curve to 48). Loss & prepay multipliers, recoveries + lag, payment stop (FICO method).",
+"c": ""
+},
+{
+"row": 17,
+"a": "2. TAB MAP",
+"b": "",
+"c": ""
+},
+{
+"row": 18,
+"a": "Claude Handoff",
+"b": "This document.",
+"c": ""
+},
+{
+"row": 19,
+"a": "F0 Deal Dashboard",
+"b": "Added 2026-10-28 (2nd tab, display only, all formulas). Front-page dashboard: banner + live settings line (row 4); KPI tiles (large numbers) in 4 sections \u2014 1 investor returns (SPV / OCM / LA MOIC & IRR from F4 B19:D20), 2 capital & cash (equity, distributions, profit, purchases, recycled, peak debt), 3 asset level per $1 (gross / net MOIC & IRR from F2a / F2, charge-offs, fee drag), 4 school (% of face: day-0, collections, total, PV, discount, program $); 5 settings & status box (input / model checks green/red); 6 two charts (running MOIC by party; SPV equity vs distributions). Red text if MOIC < 1 or IRR < 0.",
+"c": ""
+},
+{
+"row": 20,
+"a": "F1 Fusion Assumptions",
+"b": "All Fusion inputs, REGROUPED 2026-10-28 (Contents with links rows 3-10). 1 Switches B16:B25 (recycling B16, leverage B17, losses B18, prepay B19, payment stop B20, promote B21, target mode B22, outlay basis B23, after last tier B24, LA commitment basis B25). 2 Loans & credit: terms/APR/mix/curve family rows 28-35 (APR B29:E29, mix B30:E30, 60m APR placeholder E29); loan size by term B36:E36, loan counts row 37; 2b credit: loss mult B40, prepay mult B41, recovery B42, lag B43, payment-stop shares B47:E48; 2c base curves rows 52-55 (ages B:BJ); 2d effective curves rows 60-67, check B68. 3 Price & fees: advance by term B71:E71, upfront fees row 72, outlay row 73, target outlay row 74; 3b fee table rows 78-87 (B ON/OFF \u2026 J row check, K upfront per $1), totals B88:B89, check B90, across-life coefficients B93:B97. 4 Targets rows 101-110 (B ON/OFF, C investor %, E MOIC, F IRR, helpers H:L), # active B111, after-last % B112, check B114. 5 Program: first month B117, purchase amount B118, period B119, face B120, months row 121, split row 122, cash 123, face 124, ramp length B125, ramp inputs row 126, checks BK121:BL126. 6a capital: LA fixed $ B129, OCM % B130, LA % B131, shares used B132:B133; 6b leverage B136:B142 (start month B140, last draw B141, warning D141), SOFR row 145 (months B:DQ); 6c other SPV fees B148:B150; 6d promote: hurdles C154:E154, LA shares D155:F155, method B158. 7 School PV rate B161. Retired 'MOVED' rows removed. OVERALL CHECKS (2026-10-28): B12 all F1 checks (OK / WARNING / CHECK, C12 lists failures); B13 calculation-tab checks. SENSITIVITY SETTINGS (2026-10-28): section 8 rows 163-164 \u2014 B164 advance-rate step size (default 2%); Contents row 11 links to it. B165 = investor / school split step for F4a (default 2%).",
+"c": ""
+},
+{
+"row": 21,
+"a": "F2 Fusion Unit Economics",
+"b": "Added 2026-10-21. Per $1 of face engine. Summary A4:F27 (24/36/48/60/Blended: outlay, gross/net collections, fees, charge-offs, investor cash/MOIC/IRR, tiers hit, school total & PV vs own plan, checks). Tier summary A30:W44 (age each tier hit, investor/school $ in tier, MOIC/IRR at hit; row 44 ties). Blended block rows 48-69 (mix-weighted, no own tier test). Term blocks start rows 74/150/226/302 (75 rows each): +6..+9 curves (grouped), +10..+22 balance & collections (CO = MIN(balance, curve increment); interest/sched on survivors; prepay SMM x (survivors - sched); missed payments = (rate + sched factor) x (1-share) x CO in next 1-4 months; across-life fees via FA B137:B141, capped at collections), +24..+55 tier helpers grouped/collapsed (remaining need per tier: MOIC target x outlay less cash, IRR outlay grown monthly at target less cash; breakpoints; allocation per tier), +56/+57 investor/school share, +58..+63 tiers met, tier in force, investor % in force, hit flag, remaining need; +65..+72 party cash flows, running MOIC/IRR, school cum %, fees; +73/+74 checks. Colour bands by tier on rows +56..+61 (CF), red hit flag. LAYOUT (2026-10-27): summary A4:F35 \u2014 investor rows 8-20 (MOIC/IRR rows 17-18 highlighted); School header row 21 (divider line); school per $1 rows 22-26 (totals 24 & 26 highlighted); % rows 27-31; effective discount rows 32 (undiscounted) & 33 (PV) = 1 \u2212 effective advance rate; rate 34; checks 35. Net +8 rows vs original from row 21 down: tier summary A38:W52, blended block rows 56-77, term blocks start 82 / 158 / 234 / 310 (24/36/48/60m). PAYMENT STOP REBUILT (2026-10-28) to FICO method: each term block gained 5 helper rows after 'Missed payments' (prepay survival, survivors-as-if-OFF, defaulting balance per $ defaulted face, defaulted face, balance removed at charge-off); charge-off row capped by survivors-as-if-OFF balance when ON; surviving balance = opening \u2212 defaulted face \u00d7 prior scheduled balance; missed = payment \u00d7 \u03a3(1\u2212share_j) \u00d7 defaulted face(t+j). Block balance check now uses balance removed. Blended block new row 66 'Balance removed'. Term blocks now start rows 83 / 164 / 245 / 326 (missed rows 102/183/264/345).",
+"c": ""
+},
+{
+"row": 22,
+"a": "F2a Fusion Asset Returns",
+"b": "Added 2026-10-28 (after F2). GROSS (pre-fee) vs NET investor returns per $1 of face, like 6 Asset Returns. Summary A4:F16: mix, price, gross collections, investor gross cash, GROSS MOIC/IRR (rows 9-10, highlighted), NET MOIC/IRR from F2 rows 17-18, fee drag, school total gross vs net, check. Gross = tier split RE-RUN on gross collections with no fees and targets on price only: per-term split blocks copied from F2 at the SAME row numbers (24m rows 108-148, 36m 189-229, 48m 270-310, 60m 351-391; investor gross CF rows 147/228/309/390); blended gross CF row 20. If F2 split rows are ever changed, re-copy these blocks.",
+"c": ""
+},
+{
+"row": 23,
+"a": "F2b Fusion Sensitivity",
+"b": "Added 2026-10-28 (after F2a). Advance-rate sensitivity per $1 of face: 11 columns C:M = current advance rate \u00b1 5 steps (step = F1 B164; middle column H highlighted = current case). Rows: 8-11 step, change, blended advance, discount; 14-18 investor MOIC by term + blended; 21-25 investor IRR; 28-30 school total received undiscounted, PV, effective discount PV. Each column shifts every term's advance (F1 row 71) by the same change; upfront fees recomputed. Requires a single constant split (check B6); checks B32:B35 tie the middle column to F2. Helpers rows 40-52.",
+"c": ""
+},
+{
+"row": 24,
+"a": "F3 Fusion Pool Cash Flows",
+"b": "Added 2026-10-21 (Step 3). Months 1-96 in C:CT (row 4 month #, row 5 date). 1 Purchases rows 7-10 (face from FA row 72, cash to school, upfront fees, outlay); 2 Pool loan flows rows 13-25 = SUMPRODUCT(face by month, reversed blended per-$1 pattern; helpers rows 159-173 grouped) + checks 26-28; 3 School 31-34; 4 Unlevered investor 37-40; 5 Other SPV fees 43-44; 6 Leverage 47-57 (mode Pre-raise/Origination/Amortization, cost basis = advance rate x performing balance, capacity, SOFR from Pool Cash Flows row 81, interest on opening debt /12, draws to capacity, sweep repayments); 7 SPV cash & recycling 61-73 (ON: net cash; OFF: purchases funded by equity+debt only; equity row 69, distributions row 70, check 72); 8 Summary A76:B99 (B99 overall check); 9/10 Vintage views investor rows 103-128, school rows 131-156 with tie checks. PHASE 2 (2026-10-22): now months 1-120 in C:DR; vintage grids 60 vintages (investor rows 103-162, total 163, check 164; school rows 167-226, total 227, check 228); cost basis row 48 = stacked F2 row 71 (advance by term x balance) via helper row 174\u2192 shifted; leverage aligned to FICO: mode Origination through last draw month, interest on average debt in draw period (no circularity), amortisation repays MAX(excess over capacity, sweep); other fees row 44 capped each month at investor collections less interest (unpaid not carried, as FICO). (2026-10-28) SOFR row 51 now reads F1 row 152 (not FICO). New helper row 247 = balance removed at charge-off; balance-roll check row 28 uses it. Helper labels refreshed (F2 rows 58-80).",
+"c": ""
+},
+{
+"row": 25,
+"a": "F4 Fusion SPV Summary",
+"b": "Added 2026-10-21. Settings B7:D12 (LA share: OCM % input or Fixed $ / total equity; monthly hurdle rates; LA tier shares); checks B13; returns by party A14:D26 (equity, distributions, profit, MOIC, IRR, share, distributions by tier); monthly C:CT: capital rows 28-31, waterfall rows 34-52 (T1 ROC pro rata, T2 pref on total investor hurdle balance, T3/T4 OCM hurdle balances with gross-up by LA share, T5 residual; promote OFF = pro rata), LA by tier 55-59, net CFs & running MOIC/IRR 62-69. PHASE 2 (2026-10-22): monthly C:DR (120); new rows 22 Debt recap & 23 Adjusted MOIC (rows below shifted +2); recap memo row 73 (facility start month: MIN(distribution, draw)). PROMOTE METHOD (2026-10-27): B12:D12 now effective LA tier shares per F1 B101 (On top = promote + (1\u2212promote) \u00d7 B8), check E12. YEARLY VIEW (2026-10-28): section 7 rows 76-95, calendar years C:L (2027-2036), B = total: total investors / OCM / Loan America equity called, distributions, net and cumulative net cash flow; Loan America promote above pro rata (row 91); LA share of distributions (94); check row 95. DISTRIBUTION CHARTS (2026-10-28): section 8 rows 97-105 helpers (OCM row 99, LA pro rata 100, LA promote 101 = LA tiers 3-5 less its capital share of them, LA share % 102, tier paid 103, cumulative 104-105); charts 'Distributions OCM vs LA' (stacked monthly + LA share line) and 'Cumulative distributions OCM vs LA' below (months 1-96). EQUITY vs DISTRIBUTION CHARTS (2026-10-28): section 9 rows 107-119 (SPV rows 109-111, OCM 112-114, LA 115-118: equity called negative, distributions, LA pro rata/promote, cumulative net cash; check row 119 = 0); 3 charts below ('SPV equity vs distributions', 'OCM equity vs distributions', 'LA equity vs distributions'), months 1-96.",
+"c": ""
+},
+{
+"row": 26,
+"a": "F4a Fusion Split Sensitivity",
+"b": "Added 2026-10-28 (after F4). SPV / OCM / Loan America equity, distributions, MOIC and IRR vs a single investor / school split, 11 columns C:M = current investor % (F1 J101) \u00b1 5 steps (step = F1 B165); middle column H = current case. Each column has its own full scenario block (rows 40+, 36 rows each, months C:DR) re-running F3 rows 43-73 (other fees, leverage, recycling, equity / distributions) with investor share = split \u00d7 F3 row 22 net collections, and the F4 promote waterfall. Live with every switch. Checks B32:B34 (ties to F4; OCM + LA = SPV). Requires single constant split (B6). If F3 rows 43-73 or the F4 waterfall logic change, update these blocks too.",
+"c": ""
+},
+{
+"row": 27,
+"a": "F5 Fusion Dashboard",
+"b": "Added 2026-10-21. Display only (all links). 1. Returns by party A4:F14 (OCM, Loan America, total investors, school cash received, Goal fees; LA origination fees C12; settings string B13). 2. School effective advance rate B16:G22 (program level, PV discounted to program start; per $1 by term + blended from Fusion UE). 3. Investor per $1 by term A25:G31. 4. Monthly view rows 34-49 (C:CT): net CF by party, investor distributions, school cash, Goal fees, running MOIC/IRR OCM/LA/total, school cumulative % face. Charts below row 52: monthly cash investors vs school; running MOIC by party; school cumulative %. PHASE 2: monthly rows 35-49 and charts extended to C:DR (120 months). RECYCLING VIEW (2026-10-28): section 5 rows 98-114 \u2014 monthly purchases (row 100) split into funded by recycled collections (101), debt (102), new equity (103); % funded by collections (104); equity called (105), cumulative equity (106) vs cumulative purchases (107); check row 108; key points B111:B113 (first month \u226550% / 100% funded by collections, equity \u00f7 purchases). Charts 'Recycling funding mix' (stacked + % line) and 'Cumulative equity vs purchases' below (months 1-60). LEVERAGE VIEW (2026-10-28): section 6 rows 142-162 \u2014 mode, cost basis, capacity, opening debt, draws, repayments, interest, ending debt, equity called, distributions (rows 143-153), check row 154; key points B157:C162 (first draw, peak debt & month, repaid-by month, interest, debt recap). Charts 'Leverage debt build and paydown' and 'Leverage investor cash' below (months 1-60).",
+"c": ""
+},
+{
+"row": 28,
+"a": "F6 Fusion Charts",
+"b": "Added 2026-10-28. ALL 12 Fusion charts in one place, in order: 1 returns overview (running MOIC by party, monthly cash investors vs school, school cumulative cash); 2 funding & recycling (funding mix, cumulative equity vs purchases); 3 leverage (debt build & paydown, investor cash); 4 equity vs distributions by party (SPV, OCM, LA); 5 promote (monthly OCM vs LA, cumulative). Charts read data rows on F5 (rows 35-49, 98-113, 142-162) and F4 (rows 97-119); those data rows must stay. Old charts removed from F4/F5 (links left at F4 A121, F5 A51/A115/A164). Section 6 (2026-10-28): advance-rate sensitivity charts (investor MOIC and IRR vs advance rate, by term and blended), from F2b. Section 7 (2026-10-28): split sensitivity charts (MOIC and IRR vs investor split for SPV, OCM, Loan America), from F4a.",
+"c": ""
+},
+{
+"row": 29,
+"a": "Sheet3",
+"b": "User's own Fusion scenario table (B2:L5; local formulas only). Keep; do not edit without asking.",
+"c": ""
+},
+{
+"row": 31,
+"a": "3. CURRENT SETTINGS (read live 2026-10-28)",
+"b": "",
+"c": ""
+},
+{
+"row": 32,
+"a": "F1 inputs",
+"b": "Switches: recycling OFF, leverage OFF, losses ON, prepay ON, payment stop ON, promote ON, target mode MOIC, outlay Price + fee, after last tier Continue split, capital basis OCM %. Terms 24/36/48/60m: APR 14.95%/16.95%/17.95%/17.95%, mix 0.0%/25.0%/25.0%/50.0%, advance 65.0%/65.0%/65.0%/65.0%, loan size $10,000/$10,000/$10,000/$10,000. Loss mult 1.40x, prepay mult 1.00x, recovery 0.0% lag 0. Tier 1: ON 100.0% 0.0% 1.00x 20.0%; Tier 2: OFF    . Fees: Origination Loan America Upfront % Net paid 0.00%  | Servicing Goal Across life % Collections 0.00% . Program $100,000,000 over 36 months, ramp 4 months. Capital: LA fixed $2,500,000, OCM % 97.5%. Leverage LTV 50.0%, spread 4.00%, inelig 8.0%, cap $50,000,000, start m7, last draw m36, sweep 100%. Other SPV fees 2 / $1,500,000 / $750,000. Promote hurdles 16.0%/20.0%/25.0%/n.a., LA shares Pro rata/5.0%/10.0%/15.0%, method On top of pro rata.",
+"c": ""
+},
+{
+"row": 34,
+"a": "4. CURRENT OUTPUTS (2026-10-28)",
+"b": "",
+"c": ""
+},
+{
+"row": 35,
+"a": "Results",
+"b": "Per $1 net (F2 row 17-18) by term & blended: MOIC 1.20x/1.19x/1.31x/1.34x/1.29x, IRR 29.0%/20.4%/26.2%/24.147%/23.9%. Gross pre-fee blended (F2a F9:F10): 1.29x / 23.9%. Pool: face 153,846,154, cash to schools 100,000,000. SPV (F4 B16:D20, total/OCM/LA): equity $100,000,000 / $97,500,000 / $2,500,000, distributions $122,529,763 / $119,266,906 / $3,262,857, MOIC 1.23x / 1.22x / 1.31x, IRR 18.2% / 18.1% / 21.8%.",
+"c": ""
+},
+{
+"row": 37,
+"a": "5. CHECKS (all OK on 2026-10-28)",
+"b": "",
+"c": ""
+},
+{
+"row": 38,
+"a": "F1",
+"b": "B26 term mix = 100%; B62 target table; BL70:BL74 purchase plan & ramp-up; B117 loss curves non-decreasing; B134 fee table.",
+"c": ""
+},
+{
+"row": 39,
+"a": "F2 / F2a",
+"b": "F2 row 35 (split + balance identities per term and blended); F2a row 16 (gross investor + school = gross collections).",
+"c": ""
+},
+{
+"row": 40,
+"a": "F3 / F4",
+"b": "F3 rows 26-28 (gross, split, balance roll incl. balance removed at charge-off) and B99 overall; F4 B13 waterfall ties, E12 promote shares in 0-100%.",
+"c": ""
+},
+{
+"row": 42,
+"a": "6. VERIFICATION STATUS",
+"b": "",
+"c": ""
+},
+{
+"row": 43,
+"a": "FICO parity (2026-10-28)",
+"b": "With Fusion in 'normal loan' mode (65% price, 100% to investor, no fees) per-$1 MOIC/IRR matched FICO grade G 24/36/48m and E_60 (60m engine) EXACTLY (~1e-10), with losses, prepay, recoveries+lag, payment stop ON/OFF, multipliers.",
+"c": ""
+},
+{
+"row": 44,
+"a": "Fusion layers",
+"b": "Independent rebuilds matched: per-$1 engine & tier split (6 split structures, MOIC & IRR modes, both outlay bases, both after-last options), pool stacking, F4 waterfall (hurdles land exactly on 16/20/25%), F2a gross = F2 net when fees truly 0.",
+"c": ""
+},
+{
+"row": 45,
+"a": "Bugs fixed",
+"b": "Payment stop double-counted missed principal (fixed 2026-10-28); IRR non-convergence (guess 0.01 added); fee table / target table fixes (see log).",
+"c": ""
+},
+{
+"row": 47,
+"a": "7. OPEN ITEMS / KNOWN LIMITATIONS",
+"b": "",
+"c": ""
+},
+{
+"row": 48,
+"a": "24m loss method",
+"b": "24m on the 36m curve (% of original face) overstates 24m losses (est. ~33% vs ~24% on a default-rate basis). User decided NOT to add a curve-method switch (2026-10-28).",
+"c": ""
+},
+{
+"row": 49,
+"a": "Not built (by decision)",
+"b": "Age 'magnifier' loss stress and end-of-term sale (exist in FICO) \u2014 user declined for Fusion.",
+"c": ""
+},
+{
+"row": 50,
+"a": "Other SPV fees",
+"b": "Unpaid fees in cash-short months are dropped, not carried forward (F3 row 44).",
+"c": ""
+},
+{
+"row": 51,
+"a": "F2a dependency",
+"b": "F2a split blocks mirror F2 rows (24m 108-148, 36m 189-229, 48m 270-310, 60m 351-391). If F2's split rows change, re-copy them.",
+"c": ""
+},
+{
+"row": 52,
+"a": "Placeholders",
+"b": "60m APR (F1 E29); loan sizes by term (B36:E36, $10,000 each); IRR targets; average curves copied from FICO grade G (F1 section 2c) \u2014 replace with Fusion data when available.",
+"c": ""
+},
+{
+"row": 53,
+"a": "Open question",
+"b": "Q2: does the school take first loss / holdback / recourse? (not modelled).",
+"c": ""
+},
+{
+"row": 55,
+"a": "8. FUSION SPEC (as agreed in chat; built)",
+"b": "",
+"c": ""
+},
+{
+"row": 56,
+"a": "Status",
+"b": "BUILT and verified (Steps 1-5 done 2026-10-21; extended 2026-10-22/28). v4 is Fusion-only. See sections 2-7 for the current state; the rows below are the original agreed spec, kept for reference.",
+"c": ""
+},
+{
+"row": 57,
+"a": "What it is",
+"b": "Student loans to thin-file borrowers underwritten on CASH FLOW (not FICO), offered through schools that run INTERNAL PAYMENT PLANS. Money is disbursed to the school (tuition etc.).",
+"c": ""
+},
+{
+"row": 58,
+"a": "Build location",
+"b": "ALL NEW TABS (prefix 'Fusion'). Existing FICO model must stay untouched.",
+"c": ""
+},
+{
+"row": 59,
+"a": "Parties",
+"b": "Investor = OCM + Loan America (SPV). Originator = Loan America. Servicer = Goal (third party). Counterparty = the School.",
+"c": ""
+},
+{
+"row": 60,
+"a": "Credit curves",
+"b": "Use Tier G curves only. 24m & 36m use G SHORT (36m) curve; 24m sits on the 36m curve and stops at month 24. 48m & 60m use G LONG (60m) curve; 48m sits on the 60m curve and stops at month 48.",
+"c": ""
+},
+{
+"row": 61,
+"a": "Prepayments",
+"b": "Same rule as losses: G SHORT SMM for 24/36 (24 capped at 24), G LONG SMM for 48/60 (48 capped at 48).",
+"c": ""
+},
+{
+"row": 62,
+"a": "Acquisition price",
+"b": "Biggest change vs traditional loans: investor pays only A% of face (e.g. 25\u00a2 or 30\u00a2 per $1) \u2014 INPUT, flexible.",
+"c": ""
+},
+{
+"row": 63,
+"a": "Month 0 flows",
+"b": "Purchase price (A% x face) paid by investor \u2192 goes to the SCHOOL at month 0 (school gets A% of tuition upfront instead of waiting for plan collections).",
+"c": ""
+},
+{
+"row": 64,
+"a": "Origination fee",
+"b": "FEE TABLE (2026-10-21): up to 10 fees, each ON/OFF. Type Upfront (paid by investor at month 0, part of outlay; % of Net paid or Face, or Fixed $ per loan) or Across life (OFF THE TOP of collections before investor/school split; % of monthly Collections, or annual % of Beginning/Ending/Average balance charged /12, or Fixed $ per active loan per month; applies for the whole life of the loan \u2014 no start/end months). Fixed $ per loan converted via average loan size B133. Prefilled: Origination \u2013 Loan America upfront 3% of net paid; Servicing \u2013 Goal across life 3% of collections.",
+"c": ""
+},
+{
+"row": 65,
+"a": "Investor capital split",
+"b": "SWITCH: (a) Fixed $ commitment for Loan America (e.g. $2.5M, OCM funds the rest) OR (b) % basis: OCM % input, Loan America % = 1 \u2212 OCM % (allow 100% OCM).",
+"c": ""
+},
+{
+"row": 66,
+"a": "Leverage",
+"b": "Must be available with ON/OFF switch and its own inputs (LTV, spread, ineligibles, cap, raise month, draw period, sweep) \u2014 same mechanics as current SPV.",
+"c": ""
+},
+{
+"row": 67,
+"a": "Recycling",
+"b": "Must be available with ON/OFF switch (collections fund new purchases during reinvestment period).",
+"c": ""
+},
+{
+"row": 68,
+"a": "Scale",
+"b": "Model first at single-loan (asset) level, then scale to the full program/pool and SPV \u2014 mirror current flow: Assumptions \u2192 Unit Economics \u2192 Pool Cash Flows \u2192 SPV Summary (+ vintage view).",
+"c": ""
+},
+{
+"row": 69,
+"a": "Collections (gross)",
+"b": "Same loan engine as Unit Economics: interest, scheduled principal, prepayments, charge-offs, payment-stop missed payments, recoveries (rate + lag) \u2014 all on G curves.",
+"c": ""
+},
+{
+"row": 70,
+"a": "Servicing fee (Goal)",
+"b": "SUPERSEDED by fee table (see Origination fee row). Paid first, off gross collections. SWITCH for basis: (1) x% of monthly collections, (2) x% of BEGINNING balance, (3) x% of ENDING balance, (4) x% of AVERAGE (beg+end)/2 balance. Balances net of losses, prepays, recoveries. Balance-based rates assumed annual \u00f712 (to confirm).",
+"c": ""
+},
+{
+"row": 71,
+"a": "Net collections split",
+"b": "After servicing: Investor gets fixed % / School gets 100% \u2212 %, until Target 1 is hit. Target MODE switch: IRR or MOIC.",
+"c": ""
+},
+{
+"row": 72,
+"a": "Multiple targets",
+"b": "Flexible table of targets (Target 1, 2, 3, \u2026) each with its own investor/school split; next split applies after previous target is hit. After last target: option 'continue previous split to end of term'; if OFF \u2192 100% to school. FLEXIBLE TIERS (2026-10-21): target table with up to 10 tier rows; each row = ON/OFF flag + investor % + target (IRR or MOIC). Add a tier = fill a row & set ON; delete = set OFF or clear. Formulas skip OFF/blank rows and use active tiers in order; checks flag targets out of ascending order or splits outside 0-100%. Placeholder targets are illustrative only \u2014 user to supply real tiers. MECHANICS: MOIC mode = remaining need = target x outlay - cumulative investor cash. IRR mode = hurdle balance grows monthly at (1+target)^(1/12)-1 less investor cash; target hit when balance <= 0. Crossing month: cash needed at old split = need / old investor %, remainder of that month split at next tier (no overshoot). Each tier tested on TOTAL investor cash since month 0. VISUALS: per $1 views show rows Active tier, Investor%/School% in force, remaining need, running MOIC/IRR vs target, 'Tier n hit' flag; conditional-format colour band per tier, bold border on crossing month; stacked investor/school chart with running MOIC/IRR line vs targets; tier summary box (month hit, months in tier, $ to each party, IRR/MOIC at hit). USER TIERS (2026-10-21): Tier 1 60/40 until 1.5x MOIC; Tier 2 50/50 until 2.0x MOIC; continue 50/50 to end of term.",
+"c": ""
+},
+{
+"row": 73,
+"a": "Investor sub-split",
+"b": "Investor share split between OCM and Loan America via a PROMOTE WATERFALL with editable hurdles (IRR) and OCM/LA splits per tier, mirroring current SPV (ROC pro rata \u2192 pref pro rata \u2192 promote tiers \u2192 residual). SWITCH: Promote ON / OFF (OFF = pure pro rata by capital). Promote can apply even at 100% OCM capital if switched on.",
+"c": ""
+},
+{
+"row": 74,
+"a": "Dashboard",
+"b": "Monthly: investor collections, school collections; IRR and cumulative MOIC evolution by month for every entity (OCM, Loan America, total investor, school). Summary: investor outlay, collected, month each target hit, IRR, MOIC; school day-0 receipt, total collected, total as % of face (effective advance rate). SCHOOL PV PURPOSE (2026-10-21): not a comparison vs the school's own plan \u2014 it answers 'future cash is worth less today'. Effective advance rate (PV) = month-0 upfront + PV of school's share of collections at the inflation rate (FA B103); also show undiscounted effective advance rate.",
+"c": ""
+},
+{
+"row": 75,
+"a": "Pre-scale asset views",
+"b": "Before scaling: show per $1 of face AND per term (24/36/48/60) AND blended mix \u2014 monthly running (cumulative) IRR and MOIC for investor, school (and OCM/LA), the month each target is hit, the split in force each month, and final IRR/MOIC/collections per target tier and in total.",
+"c": ""
+},
+{
+"row": 76,
+"a": "School PV",
+"b": "Input discount rate (inflation) \u2192 PV of all school cash flows (incl. day 0) to today, and PV as % of face.",
+"c": ""
+},
+{
+"row": 78,
+"a": "9. FUSION \u2014 OPEN QUESTIONS (to be answered by user)",
+"b": "",
+"c": ""
+},
+{
+"row": 79,
+"a": "Q1 Target basis",
+"b": "ANSWERED 2026-10-21: (a) investor outlay for target test = SWITCH (purchase price + orig fee, or price only); (b) targets tested at MONTHLY VINTAGE x TERM level \u2014 each term (24/36/48/60) within each monthly purchase cohort steps through its own split tiers independently (chosen over vintage-blended and pool-level). Per-term $1 views therefore scale exactly to the pool.",
+"c": ""
+},
+{
+"row": 80,
+"a": "Q2 School risk",
+"b": "Does the school take first loss / holdback / recourse?",
+"c": ""
+},
+{
+"row": 81,
+"a": "Q3 Servicing",
+"b": "ANSWERED 2026-10-21: placeholders accepted \u2014 Goal 3% of collections via fee table (any basis available). Confirm actual Goal rate later.",
+"c": ""
+},
+{
+"row": 82,
+"a": "Q4 Loan terms",
+"b": "ANSWERED 2026-10-21: placeholders accepted \u2014 grade G APRs, all four terms offered; G 60m APR 17.95% is a placeholder (F1 E29). Term mix is an input (currently 0/0/50/50).",
+"c": ""
+},
+{
+"row": 83,
+"a": "Q5 Loss stress",
+"b": "ANSWERED 2026-10-21: separate Fusion multiplier (F1 B37), set to 1.17x.",
+"c": ""
+},
+{
+"row": 84,
+"a": "Q6 Waterfall",
+"b": "ANSWERED 2026-10-21: investor share split OCM vs Loan America via a PROMOTE WATERFALL (hurdle tiers like current SPV).",
+"c": ""
+},
+{
+"row": 85,
+"a": "Q7 Program size/timing",
+"b": "ANSWERED 2026-10-21: placeholders accepted ($200M cash, Jan-2027, 24 months; other SPV fees as FICO). Program size is an input (currently $50M). Purchase periods > 24 months NOT yet supported (issue #16).",
+"c": ""
+},
+{
+"row": 87,
+"a": "10. FUSION \u2014 BUILD HISTORY",
+"b": "",
+"c": ""
+},
+{
+"row": 88,
+"a": "Step 1",
+"b": "DONE 2026-10-21 \u2014 Fusion Assumptions tab: advance rate, orig fee % + basis switch, APR/term mix, G curve mapping & caps, loss/prepay multipliers, servicing, school split terms, capital split switch, leverage & recycling switches/inputs, program size/timing.",
+"c": ""
+},
+{
+"row": 89,
+"a": "Step 2",
+"b": "DONE 2026-10-21 \u2014 Fusion Unit Economics: single $1 (and single-loan) cash flows by term, showing investor vs school vs Loan America vs Goal claims; checks.",
+"c": ""
+},
+{
+"row": 90,
+"a": "Step 3",
+"b": "DONE 2026-10-21 \u2014 Fusion Pool Cash Flows (+ Fusion Vintage Cash Flows): scale to program with cohort stacking, fees, recycling, leverage.",
+"c": ""
+},
+{
+"row": 91,
+"a": "Step 4",
+"b": "DONE 2026-10-21 \u2014 Fusion SPV Summary: equity calls by capital-split switch, distributions/waterfall, returns, checks; compare to FICO program.",
+"c": ""
+},
+{
+"row": 92,
+"a": "Step 5",
+"b": "DONE 2026-10-21 \u2014 Fusion Dashboard (F5): returns by party, school effective advance rate (undiscounted & PV), investor per $1 by term, monthly cash and running MOIC/IRR, 3 charts.",
+"c": ""
+},
+{
+"row": 94,
+"a": "11. CHANGE LOG (newest at bottom \u2014 Claude must append a row after every change)",
+"b": "",
+"c": ""
+},
+{
+"row": 95,
+"a": "Date",
+"b": "Change",
+"c": "Verified"
+},
+{
+"row": 96,
+"a": "2026-10-21",
+"b": "Added 'Vintage Cash Flows' tab (after Pool Cash Flows): per-vintage cash flows for 24 monthly cohorts, all formulas, ties to Pool Cash Flows.",
+"c": "Yes \u2014 checks = 0; stress test at loss mult 1.40 passed"
+},
+{
+"row": 97,
+"a": "2026-10-21",
+"b": "Temporarily set Program Assumptions B30 to 1.40 for stress test, then restored to 1.17.",
+"c": "Yes \u2014 re-read B30 = 1.17, outputs back to base"
+},
+{
+"row": 98,
+"a": "2026-10-21",
+"b": "Added 'Claude Handoff' tab (this document) as first tab; documented model + Fusion Loans spec so far.",
+"c": "Yes"
+},
+{
+"row": 99,
+"a": "2026-10-21",
+"b": "Handoff Section 10/11 updated with Fusion collections spec: servicing fee basis switch, tiered IRR/MOIC target splits investor vs school, investor sub-split, dashboard & school PV requirements.",
+"c": "Yes"
+},
+{
+"row": 100,
+"a": "2026-10-21",
+"b": "Recorded user answers: target outlay switch; per-vintage target test; OCM/LA promote waterfall; after last target 100% to school (if continue-split off).",
+"c": "Yes"
+},
+{
+"row": 101,
+"a": "2026-10-21",
+"b": "Recorded: Fusion OCM/LA promote waterfall with editable hurdles & splits + Promote ON/OFF switch (OFF = pro rata).",
+"c": "Yes"
+},
+{
+"row": 102,
+"a": "2026-10-21",
+"b": "Recorded: pre-scale views per $1, per term and blended with running IRR/MOIC by target; discussed vintage- vs pool-level target testing (open: vintage blended vs vintage x term).",
+"c": "Yes"
+},
+{
+"row": 103,
+"a": "2026-10-21",
+"b": "Decision recorded: Fusion targets tested per monthly vintage x term (option b); updated Q1 answer.",
+"c": "Yes"
+},
+{
+"row": 104,
+"a": "2026-10-21",
+"b": "Recorded: Fusion target table to support adding/removing tiers on the fly (up to 10 rows, ON/OFF per tier); placeholder 80/20\u21921.5x, 50/50\u21922.0x explained as illustrative only.",
+"c": "Yes"
+},
+{
+"row": 105,
+"a": "2026-10-21",
+"b": "Recorded Fusion target mechanics (MOIC vs IRR test, crossing-month split) and tier visualisation design in Fusion spec (B113). Correction: previously stated as recorded before it was written.",
+"c": "Yes"
+},
+{
+"row": 106,
+"a": "2026-10-21",
+"b": "Built Fusion Assumptions tab (Step 1): switches, G-curve terms, price/fees, credit, 10-row target table (60/40\u21921.5x, 50/50\u21922.0x, continue), program plan, capital, leverage, fees, promote, school PV rate, effective curves by term. User tiers recorded in spec.",
+"c": "Yes \u2014 no errors; checks B26, B62, B73, B117 = OK; APRs, curves and face plan read back"
+},
+{
+"row": 107,
+"a": "2026-10-21",
+"b": "Fixed Fusion Assumptions target table: separate MOIC (E) and IRR (F) target columns; target mode B11 now switches which column drives K 'Target in force' and the checks; unused column greyed; IRR placeholders 20% / 30% (yellow, user to confirm). Row check moved F\u2192G.",
+"c": "Yes \u2014 tested both modes: MOIC 1.50x/2.00x, IRR 20.0%/30.0%; checks OK"
+},
+{
+"row": 108,
+"a": "2026-10-21",
+"b": "Added flexible fee table to Fusion Assumptions (section 8, rows 119-134): 10 ON/OFF fee rows, upfront vs across life, % or fixed $ per loan, bases net paid/face/collections/beg/end/avg balance, start/end months; across-life fees off the top before split; avg loan size input. Retired old fee inputs B14, B15, B30, B33, B34; B31 now = total upfront fees.",
+"c": "Yes \u2014 tested fixed $25/loan upfront (0.25% of face, outlay 0.3115) and invalid basis (CHECK), then reverted; outlay back to 0.3090, check OK"
+},
+{
+"row": 109,
+"a": "2026-10-21",
+"b": "Fusion Assumptions: conditional greying \u2014 target rows 49-58 and fee rows 121-130 grey out when OFF (ON/OFF cell stays editable); fee Basis/Rate grey when Method = Fixed $, Fixed $ grey when Method = %, Start/End month grey for Upfront fees.",
+"c": "Yes \u2014 rendered both tables, tested a Fixed $ row then reverted"
+},
+{
+"row": 110,
+"a": "2026-10-21",
+"b": "Fusion fee table: removed Start/End month columns (old J:K); Row check now col J, Upfront fee per $1 now col K; B131/B132/B134 repointed.",
+"c": "Yes \u2014 totals 0.900%, 2 active, check OK, outlay 0.3090"
+},
+{
+"row": 111,
+"a": "2026-10-21",
+"b": "Built Fusion Unit Economics (Step 2): 4 term blocks + blended per $1, flexible 10-tier investor/school split (MOIC or IRR), running MOIC/IRR, tier colour bands, tier summary, school PV vs own plan. Fusion Assumptions: cleared stray formulas E52:E58 (MOIC target cells, tiers 4-10); added across-life fee coefficients B137:B141.",
+"c": "Yes \u2014 no errors; split and balance checks 0 all terms; 48m MOIC split independently recomputed (diff 1e-16); IRR mode tested (tier hits 13/17/20/23 Tier 1, investor IRR 30.0% with '100% to school') then restored to MOIC"
+},
+{
+"row": 112,
+"a": "2026-10-21",
+"b": "Fusion Unit Economics summary rows 21-26 reworked: removed own-plan comparison; now upfront advance, school collections (undiscounted), effective advance rate undiscounted, PV of school collections, effective advance rate PV, inflation rate used.",
+"c": "Yes \u2014 24m 58.9% / PV 58.4%; blended 63.0% / 61.9%; checks OK"
+},
+{
+"row": 113,
+"a": "2026-10-21",
+"b": "Fusion Assumptions B13 reset to 'Continue split' (agreed setting; user had set '100% to school' while testing). B16 left at 'OCM %'.",
+"c": "Yes \u2014 read back B13 and UE summary"
+},
+{
+"row": 114,
+"a": "2026-10-21",
+"b": "Built Fusion Pool Cash Flows (Step 3): purchases, pool loan flows by SUMPRODUCT stacking of blended per-$1 patterns, school & investor cash, other SPV fees, leverage facility, recycling switch, summary, vintage views. Base results: face $666.7M, net coll $541.0M (investor $321.1M / school $219.9M), CO 32.0%, unlevered investor 1.56x / 58.5%, school eff. advance 63.0%, peak debt $55.5M, equity $39.9M, distributions $142.0M, equity 3.56x / 86.9%.",
+"c": "Yes \u2014 no errors; all checks 0; ties to Fusion Unit Economics blended MOIC/IRR/eff. advance; vintage grids tie; switch tests (recycling OFF 1.63x, leverage OFF 2.63x, both OFF 1.53x) all OK, restored ON/ON"
+},
+{
+"row": 115,
+"a": "2026-10-21",
+"b": "Built Fusion SPV Summary (Step 4): OCM/LA capital split (OCM % or Fixed $), 5-tier promote waterfall on investor distributions (ON/OFF), returns by party, LA by tier, running MOIC/IRR. Base (OCM % 95/5, promote ON): total 3.56x/86.9%, OCM 3.32x/82.5%, LA 8.12x/146.1%. Note: other SPV fees continue at tail (months 78-84) when collections are tiny, causing ~$0.24M of small late equity calls that are never returned.",
+"c": "Yes \u2014 checks OK; OCM IRR independently = 20.0% at Tier 3 completion and 25.0% at Tier 4; promote OFF all 3.56x; Fixed $ LA $2.5M 6.72x; OCM 100% LA promote only $13.8M; restored ON / OCM % / 95%"
+},
+{
+"row": 116,
+"a": "2026-10-21",
+"b": "Fusion Pool Cash Flows row 44: other SPV fees after the purchase period now capped at that month's investor collections (stops late unreturned equity calls). Equity 39.90M\u219239.66M; fees 6.75M\u21926.51M; investor 3.58x / 86.9%; OCM 3.34x, LA 8.16x.",
+"c": "Yes \u2014 late equity calls months 51-96 = 0; Tier 1 ROC = equity; checks OK"
+},
+{
+"row": 117,
+"a": "2026-10-21",
+"b": "Built Fusion Dashboard (Step 5): returns by party (OCM / Loan America / total / school / Goal), school effective advance rate program + per $1 by term (undiscounted & PV), investor per $1 by term, monthly cash & running MOIC/IRR by party, 3 charts. Fusion build Steps 1-5 complete.",
+"c": "Yes \u2014 0 errors; totals tie to Fusion SPV (OCM 3.34x/82.5%, LA 8.16x/146.1%, total 3.58x/86.9%), school 63.0% / PV 60.0% program; charts rendered"
+},
+{
+"row": 118,
+"a": "2026-10-21",
+"b": "Scenario analysis only (no model change; inputs restored): splits for investor 2.0x / >25% IRR. Findings (recycling/leverage/promote OFF, $100M): IRR never binding (>90% in all cases); cheapest route to 2.0x for the school is a LOWER advance with a moderate split, not a higher investor %. Candidate A: advance 22.5%, Tier 1 65% to 2.0x MOIC, then 20% investor / 80% school -> SPV 2.02x / 145% IRR, every term >= 2.0x, school effective advance PV 54.0% (today's terms 30% / 60-40 to 1.5x / 50-50: investor 1.50x, school PV 61.9%). Same school PV at 30% advance only gets investor ~1.77x. LA-friendly: orig fee 1% of face (vs 3% of net paid) + promote ON -> LA 3.5x; + leverage ON: OCM 2.0x / LA 4.3x. Awaiting user choice of terms.",
+"c": "Yes \u2014 scenarios run on live model, inputs restored (SPV back to 1.50x / 51.3%)"
+},
+{
+"row": 119,
+"a": "2026-10-21",
+"b": "Renamed & reordered tabs by flow. Original: 1 Program Assumptions, 2 Unit Economics, 3 Pool Cash Flows, 3a Vintage Cash Flows, 4 SPV Summary, 5 Summary, 6 Asset Returns, 7 Collections, 8 Collections Diagnostic, 9 Stratification, 10 Loss Curves, then Memo> and data tabs. Fusion: F1 Fusion Assumptions, F2 Fusion Unit Economics, F3 Fusion Pool Cash Flows, F4 Fusion SPV Summary, F5 Fusion Dashboard. Older text in this tab may use the old names (same tabs). README not updated.",
+"c": "Yes \u2014 formulas/charts auto-updated; SPV 2.17x/2.10x/3.74x and UE 1.478x/37.4% unchanged; Fusion tabs 0 errors"
+},
+{
+"row": 120,
+"a": "2026-10-21",
+"b": "Documentation catch-up: tab map rewritten in new workbook order (+ Sheet1); old tab names updated in sections 3-8; FICO current state (LA $0) noted; open issues #16 (purchase period >24 unsupported), #17 (LA IRR #NUM! at $0), #18 (Sheet1); new Section 9 (current settings/outputs for both models, concepts explained, Fusion leverage sizing & differences vs FICO, scenario results, placeholders, next steps); Fusion Step 5 row; Q3/Q4/Q5/Q7 answered.",
+"c": "Yes \u2014 re-read handoff after writing"
+},
+{
+"row": 121,
+"a": "2026-10-22",
+"b": "Session start: handoff read; noted G17 back to $2.5M and new 'Sheet3'. Recorded agreed build plan (Section 9 'AGREED BUILD'): purchase period up to 60m both models, leverage start + last-draw-month inputs, Fusion leverage aligned to FICO, advance rate by term, Fusion terms 30% / 50-50 to 2.0x then continue 50/50.",
+"c": "Yes \u2014 re-read"
+},
+{
+"row": 122,
+"a": "2026-10-22",
+"b": "PHASE 1 FICO: purchase period up to 60 months (1 Program Assumptions rows 90-93 to BI, checks moved to BK90:BL93, B86 & 3 Pool Cash Flows row 6 widened); leverage timing = start month G24 / last draw month H24 (3 PCF row 75 mode, SPV G12:H12 dates, H26 check); 4 SPV Summary monthly extended to 120 months (V:EK) with relative links rows 39/41/47, yearly FY2034-36 added (I:R, Total T), R1 & row 86 fixed; 3a Vintage Cash Flows rebuilt for 60 vintages.",
+"c": "Yes \u2014 base (24m, start 7 / last draw 24) unchanged: SPV 2.17x / 36.4%, OCM 2.10x, LA 3.74x, equity $57.4M; all checks 0 / OK; tests: 36m (draw to 24) 1.92x, 36m (draw to 36) 2.62x, 60m (draw to 60) 3.23x, start 1 / last draw 12 1.72x \u2014 all checks OK; vintage tab ties at 24/36/60; 0 errors; inputs restored to 24 / 7 / 24"
+},
+{
+"row": 123,
+"a": "2026-10-22",
+"b": "PHASE 2 FUSION: F1 advance rate by term (B29:E29) flowing to upfront fees, outlay, target outlay (per term), school month-0 cash, face-per-cash (F29) and leverage cost basis (F2 new row 71); purchase period 5-60 (F1 rows 69-73 to BI); leverage start month B85 + last draw month B86; F3/F4/F5 extended to 120 months, F3 vintage grids to 60; leverage aligned to FICO (avg-debt interest in draw period, amortisation \u2265 excess over capacity), other fees capped monthly at collections less interest, F4 debt recap + adjusted MOIC. Cleared stray formulas F1 E52:F58. Terms set: 30% all terms, Tier 1 50/50 to 2.0x MOIC, Tier 2 OFF, continue. Note: user changed FICO 4 SPV Summary H24 to 36.",
+"c": "Yes \u2014 0 errors on F3/F4/F5; all checks OK (F1 B73, F3 B99, F4 B13) in 8 scenarios (24/36/60m, leverage on/off with matching draw windows, advance by term 25/30/35/40%); face and unlevered results unchanged vs before; only change at base = other fees capped (equity $25.55M\u2192$25.33M, SPV 1.748x\u21921.764x); inputs restored"
+},
+{
+"row": 124,
+"a": "2026-10-22",
+"b": "F5 Chart 1 value axis format set to $0.0M (labels were duplicating at $0.5M gridlines).",
+"c": "Yes \u2014 chart viewed"
+},
+{
+"row": 125,
+"a": "2026-10-22",
+"b": "FICO: purchase amount 1 Program Assumptions B85 set to $300M and purchase period B87 to 36 months (user; matches last draw month 4 SPV H24 = 36). Face $416.7M; facility cap (LTV\u00d7purchases) now $150M; SPV 2.71x / 39.9%, OCM 2.59x, LA 5.53x; equity $59.2M.",
+"c": "Yes \u2014 plan checks OK (100% split, $300M, period fits), pool balance check 0, SPV Q1/R1 OK, vintage checks 0, 0 errors on FICO tabs"
+},
+{
+"row": 126,
+"a": "2026-10-23",
+"b": "Added tab 4a Funding Walk (after 4 SPV Summary): sources/uses of cash, purchase funding split (recycled 224.7M / debt 17.6M / equity 74.0M of 316.3M purchases+fees), facility capacity vs debt, cumulative equity in/out; 4 charts. Note: user reset 4 SPV Summary H24 last draw month 60 \u2192 36 (SPV 2.38x).",
+"c": "Yes \u2014 checks rows 20 & 27 OK, 0 errors, charts viewed"
+},
+{
+"row": 127,
+"a": "2026-10-23",
+"b": "Fixed 4a Funding Walk rows 24-26 to respect the recycling switch (1 Program Assumptions B6): row 24 = SPV recycled memo (row 44) when ON, collections paying fees only when OFF; row 26 equity = MIN(remaining, equity called); row 25 debt = residual. Chart 1 series renamed 'Collections'. User left recycling OFF (SPV 1.34x).",
+"c": "Yes \u2014 both states tested: ON 221.1/21.2/74.0, OFF 16.1/0/300.2; checks rows 20 & 27 OK; charts viewed"
+},
+{
+"row": 128,
+"a": "2026-10-23",
+"b": "Recycling OFF logic (user): equity now funds purchases AND origination fees; collections only pay other SPV fees and debt service, rest distributed. Changed 3 Pool Cash Flows rows 48 (new money) & 51 (distributable), 4 SPV Summary rows 56 (distributions) & 57 (equity), 4a Funding Walk row 24. ON case unchanged. OFF case: equity $300.2M\u2192$309.0M, SPV 1.34x\u21921.33x, OCM 1.21x. Current user inputs: recycling ON, facility start month 6 (SPV 2.82x / 40.3%, OCM 2.21x).",
+"c": "Yes \u2014 ON and OFF tested: SPV row 61 = 0, PCF row 54 \u2248 0, Q1/R1 OK, SPV vs pool rows 148-149 OK, Funding Walk checks OK"
+},
+{
+"row": 129,
+"a": "2026-10-23",
+"b": "Recycling OFF + leverage: debt now FUNDS purchases (user). 3 Pool Cash Flows row 77 draws = MIN(available capacity, purchases + orig fee) when recycling OFF; rows 48/51 and 4 SPV Summary rows 56/57 use draws to fund purchases before equity; SPV row 60 debt recap memo = 0 when recycling OFF. ON case unchanged (still recaps excess capacity at facility start). OFF+leverage: equity $309.0M\u2192$244.0M, SPV 1.33x\u21921.42x, OCM 1.21x\u21921.27x. OPEN: user to decide whether ON case should also draw only what purchases need (no recap).",
+"c": "Yes \u2014 OFF and ON tested; SPV row 61 = 0, PCF row 54 = 0, Q1/R1 OK, rows 148 = 0, Funding Walk checks OK; chart viewed"
+},
+{
+"row": 130,
+"a": "2026-10-23",
+"b": "Documentation catch-up (user request): updated Sections 1-4 (horizon, 4 SPV Summary layout, switches, purchase plan, leverage timing, hurdles, current outputs), Section 7 leverage/recycling logic incl. recycling-OFF rules and verification, Section 8 #18, Section 9 current FICO/Fusion settings & outputs, next steps; added 7 'Explained' rows (end-to-end, levers, recycling/leverage walk, why debt \u2260 50% of purchases, debt draws & recap, design choices, Fusion safety). Sheet3 = user's Fusion scenario table (keep).",
+"c": "Yes \u2014 values re-read"
+},
+{
+"row": 131,
+"a": "2026-10-23",
+"b": "FULL VERIFICATION (no model changes; all flexed inputs restored): independent JS rebuilds matched sheet to $0 \u2014 FICO loan engine all 26 cells (textbook pool amortisation, payment stop OFF), FICO pool/SPV/debt/waterfall/XIRR at current inputs; Fusion per-$1 engine all 4 terms in MOIC and IRR modes, Fusion pool/SPV/debt/promote with leverage+promote OFF and ON. Flexed 25 FICO and 27 Fusion scenarios: all directions sensible, checks OK except new issues #19-#23 (recorded in Section 8) plus known #17 (LA IRR #NUM! at $0).",
+"c": "Yes"
+},
+{
+"row": 132,
+"a": "2026-10-23",
+"b": "Fixed issues #19 (FICO sale proceeds into SPV + balance check), #21 (last-draw warnings PA C87 / F1 D86), #22 (Fusion draws capped when recycling OFF; recap 0), #23 (F3 B99 IFERROR), #17 (FICO LA/OCM/SPV IRR n.a.). #20 (LA promote share below pro rata) still open \u2014 awaiting user decision.",
+"c": "Yes \u2014 base unchanged (FICO 2.21x/36.5%, OCM 2.09x, LA 4.73x; Fusion 3.07x/39.9%); sale ON 2.32x checks OK; FICO last draw 12 \u2192 WARNING; LA $0 \u2192 n.a.; Fusion rec OFF+lev \u2192 draws 22.8M, recap 0, check OK; all tiers OFF \u2192 CHECK; 0 errors on edited tabs; inputs restored"
+},
+{
+"row": 133,
+"a": "2026-10-23",
+"b": "Ramp-up period made an input in both models: FICO 1 Program Assumptions B89 (length) + row 94 (monthly % inputs), row 91 formula; Fusion F1 B73 (length) + row 74 inputs, row 70 formula; old F1 check B73 moved to BL70; new ramp checks. Existing 4-month ramps carried over, results unchanged.",
+"c": "Yes \u2014 base unchanged (FICO 2.21x/36.52%, Fusion 2.55x/53.4%); tested ramp 6 (FICO 2.26x), ramp 8 Fusion, ramp 0 (flat 4.17%/2.78%), invalid ramp >100% \u2192 CHECK; restored"
+},
+{
+"row": 134,
+"a": "2026-10-27",
+"b": "Promote method switch added to both models (Absolute vs On top of pro rata). FICO: 4 SPV Summary O35 switch, O36:R37 effective shares, S36 check, E122/E126/E130 repointed, labels J33-J37. Fusion: F1 B101 switch, A98/A99 relabelled, D99:F99 OCM effective; F4 B12:D12 effective shares, E12 check, labels A58:A60. Default Absolute.",
+"c": "Yes \u2014 Absolute results identical to before (FICO 2.19x/2.13x/4.30x; Fusion 1.43x/1.42x/1.80x); On top: FICO LA 4.95x / OCM 2.11x, Fusion LA 1.97x / OCM 1.41x; LA ~30% capital test: FICO LA 1.70x abs vs 2.35x on top, Fusion 1.29x vs 1.46x; checks OK; inputs restored"
+},
+{
+"row": 135,
+"a": "2026-10-27",
+"b": "F2 Fusion Unit Economics: added School economics block (rows 29-49) in $ per $1 of face, $ per average loan (F1 B133) and % of face \u2014 day-0 advance, collections received, total, PV of collections, total PV; inserted 20 rows (everything below shifted +20). Investor MOIC/IRR (rows 17-18) bolded and highlighted (blended column darker); school totals highlighted.",
+"c": "Yes \u2014 F2/F4 results identical before/after insert; 0 errors on F2-F5; checks F2 row 27, F3 B99, F4 B13 OK; block viewed on screen"
+},
+{
+"row": 136,
+"a": "2026-10-27",
+"b": "F2: removed the separate School economics block (per user) and instead added 5 school rows to the summary in per-$1-of-face terms (rows 21-25), above the existing % rows; school totals highlighted. Net layout vs original: +5 rows from row 21 down.",
+"c": "Yes \u2014 F2/F4/F5 results unchanged, 0 errors F2-F5, checks OK, summary viewed on screen"
+},
+{
+"row": 137,
+"a": "2026-10-27",
+"b": "F2 summary: added 'School' header row 21 with a divider line separating investor and school sections; added effective discount rows 32-33 (1 \u2212 effective advance rate, undiscounted and PV); thin line above the rate row. +3 rows (rows below shifted).",
+"c": "Yes \u2014 F2/F4/F5 results unchanged, 0 errors F2-F5, checks OK, viewed on screen"
+},
+{
+"row": 138,
+"a": "2026-10-27",
+"b": "F3 Fusion Pool Cash Flows: refreshed stale labels only \u2014 note A2 (months C:DR = 1-120, helpers rows 233-246) and helper labels A231, A233:A246 (now cite Fusion Unit Economics rows 58-79 after F2 row inserts). No formula changes.",
+"c": "Yes \u2014 labels re-read"
+},
+{
+"row": 139,
+"a": "2026-10-28",
+"b": "BUG FIX: Excel IRR failed to converge in some cash-flow patterns (e.g. Fusion with prepayments OFF + recycling ON \u2192 SPV IRR 'n.a.', F3 B98 showed 0%). Added a starting guess (0.01 monthly) to every IRR() formula: F2 305 cells, F3 2, F4 243, F5 120, 3a Vintage 61. FICO XIRR formulas unchanged.",
+"c": "Yes \u2014 failing case now 22.2% (matches independent solve 22.16%); current results unchanged (Fusion SPV 1.89x/24.0%, FICO 2.19x/28.2%); 0 errors; checks OK"
+},
+{
+"row": 140,
+"a": "2026-10-28",
+"b": "Fusion UNLINKED from FICO: 6 links removed (APRs, curve lookup, base loss & prepay curves, payment-stop shares, SOFR) \u2014 values copied into F1 (B20:D20, B44:E45, new section 13 rows 143-152) and formulas repointed. Results identical.",
+"c": "Yes \u2014 0 remaining links to non-Fusion tabs; 0 errors; results unchanged (per $1 24m 1.2103x/33.8% etc.); curve check OK"
+},
+{
+"row": 141,
+"a": "2026-10-28",
+"b": "BUG FIX: Fusion payment stop double-counted missed principal. Rebuilt in F2 term blocks to FICO's method (5 helper rows per block, rewritten charge-off / surviving balance / missed payments), blended row 66 + F3 helper row 247 for balance removed; block and pool balance checks updated.",
+"c": "Yes \u2014 Fusion in 'normal loan' mode (65% price, 100% to investor, no fees) now matches FICO grade G 24/36/48m EXACTLY with payment stop ON (24m 1.1978x/28.98%, 36m 1.1888x/20.44%, 48m 1.3098x/26.20%), also with recoveries, prepay OFF, other multipliers (max diff ~1e-10); full Fusion structure (split, fees, IRR & MOIC modes, recycling, leverage) 0 errors, all checks OK; inputs restored"
+},
+{
+"row": 142,
+"a": "2026-10-28",
+"b": "Fusion: average loan size now an input per term (F1 B133:E133, F133 face-weighted average) instead of one value; per-loan fixed fees use each term's own size (F1 B31:E31; F2 across-life fee rows 109/190/271/352); fee table K uses F133; new display row 135 = number of loans by term.",
+"c": "Yes \u2014 results unchanged at $10,000 each; 0 errors; tested $50 upfront + $2/month fixed fees at sizes 5k/8k/12k/15k (per-$1 fees scale inversely with size); inputs restored"
+},
+{
+"row": 143,
+"a": "2026-10-28",
+"b": "Added tab 'F2a Fusion Asset Returns' (after F2): gross pre-fee investor & school returns per $1 by term + blended (tier split re-run on gross collections, targets on price only) alongside net returns and fee drag.",
+"c": "Yes \u2014 gross equals F2 net exactly when fees are truly set to 0 and outlay = price only (MOIC and IRR modes, 2-tier split, payment stop ON; max diff 0); 0 errors; check row 16 = 0; inputs restored"
+},
+{
+"row": 144,
+"a": "2026-10-28",
+"b": "F2a: removed tier colour-band conditional formats copied over from F2 (they pointed at the wrong rows on F2a). Dependency audit for a Fusion-only v4: Fusion tabs (F1, F2, F2a, F3, F4, F5) have NO formula, chart, conditional-format or named-range links to any FICO/data tab; FICO tabs don't feed Fusion. Sheet3 (user scenario table) has only local formulas; Sheet1 empty.",
+"c": "Yes \u2014 scanned formulas, chart series, conditional formats, names on all 6 Fusion tabs"
+},
+{
+"row": 145,
+"a": "2026-10-28",
+"b": "v4 Fusion-only: deleted 19 tabs (README, FICO tabs 1-10 incl. 3a/4a, Memo>, SummaryNew_data, TNC_data, VintageCurves_data, Keys_data, Sheet1). Kept Claude Handoff, F1, F2, F2a, Sheet3, F3, F4, F5. Handoff rewritten as Fusion-only (sections 0-7 new; Fusion spec, questions, build history and full change log retained).",
+"c": "Yes \u2014 Fusion results identical before/after deletion; 0 errors on Fusion tabs; all checks OK; no broken names"
+},
+{
+"row": 146,
+"a": "2026-10-28",
+"b": "F1 Fusion Assumptions REGROUPED into 7 sections with a linked Contents block (1 Switches; 2 Loans & credit incl. loan size, credit, base & effective curves; 3 Price & fees incl. fee table; 4 Targets; 5 Program & ramp-up; 6 SPV structure: capital, leverage + SOFR, other fees, promote; 7 School). Blocks MOVED (cut/paste semantics) so every formula on F2-F5 followed; 5 retired 'MOVED' rows removed; labels citing old addresses updated on F1-F4. New addresses in the tab map row for F1.",
+"c": "Yes \u2014 full value snapshot of F2, F2a, F3, F4, F5, Sheet3: 0 cells changed after move and gap removal; F1 input values all identical; 0 errors; dropdowns and grey-out rules intact (Excel merged two identical grey rules); 7 inputs flexed at new addresses all flow through, then restored (0 differences). Rehearsed on scratch tabs first; temporary hidden backup deleted after verification."
+},
+{
+"row": 147,
+"a": "2026-10-28",
+"b": "F1 row 77 (fee-table column headers) was 57.5pt tall because long wrapped headers; shortened headers (B 'Active', I 'Fixed $/loan', K 'Upfront /$1' with explanatory note in L77) and reset row to normal height. Labels only.",
+"c": "Yes \u2014 row height 11.5pt; viewed on screen"
+},
+{
+"row": 148,
+"a": "2026-10-28",
+"b": "F1 overall checks at the top: B12 = all 9 F1 checks (B35 term mix, B68 loss curves, B90 fee table, B114 target tiers, BL122/BL123/BL126 purchase plan & ramp-up, C141 leverage months; D141 last-draw warning \u2192 'WARNING'); C12 lists what fails. B13 = calculation-tab checks (F2 B35:F35, F2a F16, F3 B99, F4 B13 & E12). Green OK / amber WARNING / red CHECK.",
+"c": "Yes \u2014 tested invalid term mix \u2192 CHECK naming 'term mix', leverage last draw before purchases end \u2192 WARNING; restored \u2192 OK/OK; viewed on screen"
+},
+{
+"row": 149,
+"a": "2026-10-28",
+"b": "F5 Dashboard: added section 5 'Recycling' (rows 98-114) showing how each month's purchases are funded (recycled collections / debt / new equity), % funded by collections, cumulative equity vs purchases, key points; plus 2 charts.",
+"c": "Yes \u2014 funding check row 108 = 0; totals tie to F3 (purchases $103.0M = collections $74.9M + equity $28.1M); charts viewed"
+},
+{
+"row": 150,
+"a": "2026-10-28",
+"b": "F5 Dashboard: added section 6 'Leverage' (rows 142-162): monthly facility mode, cost basis, capacity, draws, repayments, interest, debt balance, equity called and distributions, key points, plus 2 charts (debt build & paydown; investor cash in/out). User has turned leverage ON (F1 B17).",
+"c": "Yes \u2014 debt roll check row 154 = 0; key points at leverage ON: first draw m7, peak $21.4M m36, repaid by m43, interest $4.0M, recap $3.5M; charts viewed"
+},
+{
+"row": 151,
+"a": "2026-10-28",
+"b": "Set Fusion leverage switch F1 B17 to OFF (user request). Current: single split 55/45 (C101), recycling ON, origination 4%, servicing 3%, loss 1.40x, advance 30%, promote LA shares 5/30/50% (user-set D155:F155).",
+"c": "Yes \u2014 switch reads OFF; status lights OK"
+},
+{
+"row": 152,
+"a": "2026-10-28",
+"b": "F4 Fusion SPV Summary: added section 7 yearly view (rows 76-95) \u2014 by calendar year, equity called, distributions, net and cumulative cash flow for total investors, OCM and Loan America, plus Loan America promote above its pro rata share and its share of distributions.",
+"c": "Yes \u2014 yearly totals tie to F4 B16:D17; OCM + LA = total every year (row 95 = 0); viewed on screen"
+},
+{
+"row": 153,
+"a": "2026-10-28",
+"b": "F4: added section 8 (rows 97-105) and 2 charts showing distributions over time: OCM vs Loan America split into pro rata share and promote, LA share of each month's distributions, and cumulative distributions (OCM left axis, LA right axis).",
+"c": "Yes \u2014 helper totals tie: OCM $132.5M, LA $3.8M pro rata + $15.7M promote = $19.5M = F4 D17; charts viewed"
+},
+{
+"row": 154,
+"a": "2026-10-28",
+"b": "F4: added section 9 (rows 107-119) and 3 charts: monthly equity called (below zero) vs distributions (above zero) with cumulative net cash line, for SPV, OCM and Loan America (LA split pro rata vs promote). All formula-driven from F4 rows 30-32, 36, 50, 100-101.",
+"c": "Yes \u2014 totals tie to F4 B16:D17 and SPV = OCM + LA (row 119 = 0) under current, recycling OFF, leverage ON, promote method flipped, promote OFF; inputs restored; charts viewed"
+},
+{
+"row": 155,
+"a": "2026-10-28",
+"b": "New tab 'F6 Fusion Charts' (last tab): all 12 Fusion charts recreated in a logical order with section headers (same live data sources on F4/F5); the 12 originals deleted from F4 and F5; link notes left where they were. Monthly cash investors vs school changed to stacked so both series are visible. Tab order restored.",
+"c": "Yes \u2014 12 charts on F6, 0 on F4/F5, no overlaps, all viewed; data sources unchanged"
+},
+{
+"row": 156,
+"a": "2026-10-28",
+"b": "Added advance-rate sensitivity: new tab 'F2b Fusion Sensitivity' (after F2a) with a \u00b15-step table of investor MOIC / IRR by term and blended and school take (undiscounted, PV, effective discount); step-size input F1 B164 (section 8, linked from Contents row 11); 2 charts added to F6 section 6.",
+"c": "Yes \u2014 middle column ties to F2 exactly; independently changed F1 advance by \u22124pp, +6pp, \u221210pp and F2's live results matched the matching sensitivity column exactly (diff 0); step 1% gives 25-35%; restored 2%; charts viewed; F1 status OK"
+},
+{
+"row": 157,
+"a": "2026-10-28",
+"b": "Added SPV-level split sensitivity: new tab 'F4a Fusion Split Sensitivity' (after F4) with 11 full scenario blocks; step input F1 B165; 2 charts on F6 section 7. Set F1 investor split C101 to 55% (user's stated base; was 50%).",
+"c": "Yes \u2014 middle column ties to F4 exactly; independently set F1 split to 45%, 49%, 63% and F4 matched the matching column (diff ~1e-13); tie also exact with recycling/leverage OFF/ON, promote OFF, on-top method, fixed $ LA; inputs restored; charts viewed"
+},
+{
+"row": 158,
+"a": "2026-10-28",
+"b": "Added 'F0 Deal Dashboard' (after Claude Handoff): visual KPI-tile dashboard of the headline numbers, settings and checks, plus 2 charts. F5 kept for detailed tables.",
+"c": "Yes \u2014 all tiles are formulas tying to F2/F2a/F3/F4/F1; viewed on screen"
+}
+]
