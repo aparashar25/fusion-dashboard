@@ -8,7 +8,7 @@
  "target_mode": "MOIC",
  "outlay_basis": "Price + fee",
  "after_last_tier": "Continue split",
- "capital_basis": "OCM %",
+ "capital_basis": "Fixed $",
  "terms": [
   24,
   36,

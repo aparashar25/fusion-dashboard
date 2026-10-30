@@ -95,12 +95,27 @@ def _bad(x):
     return x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x)))
 
 
-def fx(x, d=2):
-    return "n.a." if _bad(x) else f"{x:,.{d}f}x"
+# House style: percentages 2 decimals, MOIC 3 decimals, other ratios 3 decimals, $ on every dollar figure.
+def fx(x, d=None):
+    return "n.a." if _bad(x) else f"{x:,.3f}x"
 
 
-def fp(x, d=1):
-    return "n.a." if _bad(x) else f"{x * 100:,.{d}f}%"
+def fp(x, d=None):
+    return "n.a." if _bad(x) else f"{x * 100:,.2f}%"
+
+
+def fd(x, d=None):
+    """Dollars per $1 of face, 3 decimals."""
+    if _bad(x):
+        return "n.a."
+    return f"-${abs(x):,.3f}" if x < 0 else f"${x:,.3f}"
+
+
+def fdollar(x, d=None):
+    """Whole dollars."""
+    if _bad(x):
+        return "n.a."
+    return f"-${abs(x):,.0f}" if x < 0 else f"${x:,.0f}"
 
 
 def fm(x, d=1):
@@ -117,8 +132,8 @@ def fm(x, d=1):
     return f"{s}${a:,.0f}"
 
 
-def fc(x, d=4):
-    return "n.a." if _bad(x) else f"{x:,.{d}f}"
+def fc(x, d=None):
+    return "n.a." if _bad(x) else f"{x:,.3f}"
 
 
 def kpi(value: str, label: str, sub: str = "", color: str | None = None, negative: bool = False):
@@ -229,14 +244,26 @@ def clear_widget_state():
             del st.session_state[k]
 
 
+def _axis_fmt(fig, yfmt, title):
+    if yfmt and "%" in yfmt:
+        fig.update_yaxes(tickformat=yfmt, hoverformat=".2%")
+    elif yfmt:
+        fig.update_yaxes(tickformat=yfmt)
+    elif "($)" in title:
+        fig.update_yaxes(tickprefix="$", hoverformat="$,.0f")
+    elif "MOIC" in title:
+        fig.update_yaxes(hoverformat=".3f", ticksuffix="x")
+    else:
+        fig.update_yaxes(hoverformat=",.3f")
+
+
 def line_fig(x, series: dict, title="", yfmt=None, height=340, colors=None, dash=None):
     fig = go.Figure()
     for name, y in series.items():
         fig.add_trace(go.Scatter(x=x, y=y, name=name, mode="lines",
                                  line=dict(width=2.2, color=(colors or {}).get(name), dash=(dash or {}).get(name))))
     fig.update_layout(title=dict(text=title, font=dict(size=15)), height=height)
-    if yfmt:
-        fig.update_yaxes(tickformat=yfmt)
+    _axis_fmt(fig, yfmt, title)
     return fig
 
 
@@ -245,6 +272,5 @@ def bar_fig(x, series: dict, title="", yfmt=None, height=340, colors=None, barmo
     for name, y in series.items():
         fig.add_trace(go.Bar(x=x, y=y, name=name, marker_color=(colors or {}).get(name), marker_line_width=0))
     fig.update_layout(title=dict(text=title, font=dict(size=15)), height=height, barmode=barmode, bargap=0.15)
-    if yfmt:
-        fig.update_yaxes(tickformat=yfmt)
+    _axis_fmt(fig, yfmt, title)
     return fig

@@ -26,6 +26,23 @@ def _y2(f, fmt=None):
     f.update_layout(yaxis2=dict(overlaying="y", side="right", showgrid=False, tickformat=fmt))
 
 
+def _ax(axis):
+    return "yaxis" if axis == "y" else "yaxis2"
+
+
+# hover and tick formats: $ whole dollars, MOIC 3 decimals with x, percentages 2 decimals
+def _money(f, axis="y"):
+    f.update_layout(**{_ax(axis): dict(tickprefix="$", hoverformat="$,.0f")})
+
+
+def _moic(f, axis="y"):
+    f.update_layout(**{_ax(axis): dict(ticksuffix="x", hoverformat=".3f")})
+
+
+def _pct(f, axis="y"):
+    f.update_layout(**{_ax(axis): dict(tickformat=".0%", hoverformat=".2%")})
+
+
 # ---------------------------------------------------------------- section 1: returns overview (F5 rows 35-49)
 def running_moic(res, months=120, la_right=False, title="Running MOIC by party (cumulative distributions ÷ cumulative equity)"):
     mv = res["f5"]["monthly"].iloc[:months]
@@ -39,6 +56,9 @@ def running_moic(res, months=120, la_right=False, title="Running MOIC by party (
     else:          # F6 chart: one axis, order OCM, Loan America, total
         _line(f, x, mv["Loan America running MOIC"], "Loan America running MOIC", K.LA)
         _line(f, x, mv["Total investor running MOIC"], "Total investor running MOIC", K.INK)
+    _moic(f)
+    if la_right:
+        _moic(f, 'y2')
     return f
 
 
@@ -48,6 +68,7 @@ def cash_investors_vs_school(res):
     _bar(f, mv.index, mv["Investor distributions"], "Investor distributions", K.OCM)
     _bar(f, mv.index, mv["School cash received"], "School cash received (advance + share of collections)", K.SCHOOL)
     f.update_layout(barmode="relative")
+    _money(f)
     return f
 
 
@@ -56,6 +77,7 @@ def school_cumulative(res):
     f = _fig("School cumulative cash received (% of program face)")
     _line(f, mv.index, mv["School cumulative cash (% of program face)"], "School cumulative cash (% of program face)", K.SCHOOL)
     f.update_yaxes(tickformat=".0%")
+    _pct(f)
     return f
 
 
@@ -69,6 +91,8 @@ def funding_mix(res):
     _bar(f, x, rc["Funded by new equity ($)"], "Funded by new equity ($)", K.OCM)
     _line(f, x, rc["Share funded by recycled collections (%)"], "Share of purchases funded by recycled collections (%)", K.INK, secondary=True)
     f.update_layout(barmode="relative"); _y2(f, ".0%")
+    _money(f)
+    _pct(f, 'y2')
     return f
 
 
@@ -77,6 +101,7 @@ def cum_equity_vs_purchases(res):
     f = _fig("Cumulative purchases vs cumulative equity called (the gap is funded by recycled collections and debt)")
     _line(f, rc.index, rc["Cumulative equity called ($)"], "Cumulative equity called ($)", K.OCM)
     _line(f, rc.index, rc["Cumulative purchases ($)"], "Cumulative purchases ($)", K.SCHOOL)
+    _money(f)
     return f
 
 
@@ -90,6 +115,7 @@ def debt_facility(res):
     _line(f, x, lv["Ending debt ($)"], "Ending debt ($)", K.INK)
     _line(f, x, lv["Borrowing capacity ($)"], "Borrowing capacity ($)", K.FEES, dash="dot")
     f.update_layout(barmode="overlay")
+    _money(f)
     return f
 
 
@@ -99,6 +125,7 @@ def leverage_investor_cash(res):
     _bar(f, lv.index, lv["Equity called ($)"], "Equity called ($)", K.DEBT)
     _bar(f, lv.index, lv["Distributions to investors ($)"], "Distributions to investors ($)", K.OCM)
     f.update_layout(barmode="group")
+    _money(f)
     return f
 
 
@@ -126,6 +153,9 @@ def party_equity_vs_dist(res, party, months=96, with_line=True, title=None):
     f.update_layout(barmode="relative")
     if with_line:
         _y2(f)
+    _money(f)
+    if with_line:
+        _money(f, 'y2')
     return f
 
 
@@ -139,6 +169,8 @@ def promote_monthly(res):
     _bar(f, x, w.la_promote, "Loan America: promote above pro rata", K.LA)
     _line(f, x, w.la_share_month, "Loan America share of the month's distributions (%)", K.INK, secondary=True)
     f.update_layout(barmode="relative"); _y2(f, ".0%")
+    _money(f)
+    _pct(f, 'y2')
     return f
 
 
@@ -148,6 +180,8 @@ def promote_cumulative(res):
     _line(f, w.index, w.ocm_cum_dist, "Cumulative distributions to OCM", K.OCM)
     _line(f, w.index, w.la_cum_dist, "Cumulative distributions to Loan America", K.LA, secondary=True)
     _y2(f)
+    _money(f)
+    _money(f, 'y2')
     return f
 
 
@@ -164,6 +198,8 @@ def adv_sens(res, what="MOIC"):
     f.update_layout(legend=dict(y=-0.22))
     if what == "IRR":
         f.update_yaxes(tickformat=".0%")
+    (_moic(f) if what == 'MOIC' else _pct(f))
+    f.update_xaxes(hoverformat='.2%')
     return f
 
 
@@ -180,4 +216,7 @@ def split_sens(res, what="MOIC"):
     f.update_layout(legend=dict(y=-0.22))
     if what == "IRR":
         f.update_yaxes(tickformat=".0%")
+    (_moic(f) if what == 'MOIC' else _pct(f))
+    (_moic(f, 'y2') if what == 'MOIC' else _pct(f, 'y2'))
+    f.update_xaxes(hoverformat='.2%')
     return f

@@ -13,10 +13,11 @@ streamlit run app.py
 Your browser opens at http://localhost:8501. The base case loads automatically (`scenarios/base_case_v4.json`).
 To start from a different version of the workbook, upload the .xlsx in the sidebar: every F1 input is read in.
 
-## Light and dark mode
+## Display
 
-The app follows your computer's light or dark setting. To switch by hand: menu (top right) > Settings > Choose app theme.
-Tables, charts and cards all adapt.
+The app opens in dark mode (set in `.streamlit/config.toml`). Number style everywhere: percentages to 2 decimals,
+MOIC to 3 decimals (1.324x), other ratios to 3 decimals, $ on every dollar figure (whole dollars for program
+amounts, 3 decimals for per-$1 amounts). Totals, MOIC, IRR and other key lines are bold and highlighted in every table.
 
 ## Pages
 
@@ -39,12 +40,33 @@ Tables, charts and cards all adapt.
 
 Extra charts beyond the Excel sit at the bottom of a page under "Additional views (not in the workbook)".
 
+## Export to Excel (investor workbook)
+
+The sidebar button **Export to Excel workbook** builds and downloads a workbook with live Excel formulas for the scenario on
+screen (`fusion/excel_export.py`, about 100,000 formulas, a few seconds). Only the Assumptions tab holds typed-in values;
+every other number is a formula that traces back to it, and key inputs are named cells (Recycling, LossMultEff, NTiers,
+AdvBlended ...) so formulas read in plain words.
+
+Tabs: Read me, Overview, Assumptions, Loan economics, Gross vs net, Pool cash flows, SPV and waterfall, Program detail,
+Charts (all 16 plus the 2 overview charts, as native Excel charts), Sens - Advance rate, Sens - Investor split (visible
+re-run blocks, no data tables), Checks (rolls up to Model status), Compare scenarios (live column plus saved scenarios),
+Scenario notes and Model notes.
+
+Verification: `python tests/excel_roundtrip.py [inputs.json | model.xlsx ...]` builds the workbook, recalculates it in
+LibreOffice and ties about 33,000 formula cells back to the Python engine (every term block, the pool, the waterfall, the
+program views, both sensitivities, checks and overview). It passed on the base case and six other scenarios, including the
+five stress scenarios and the original v4 inputs. Together with `tests/tie_out.py` (original Excel vs Python) that gives a
+three-way match: original workbook = Python engine = exported workbook.
+
+The workbook is saved with "recalculate on open", so Excel computes every value the first time it is opened.
+
 ## Code layout
 
 ```
 fusion/inputs.py   all F1 inputs as one object; Excel loader; JSON save / load
 fusion/engine.py   derive (F1 formulas + checks), term_block + split_engine (F2), asset_returns (F2a),
                    pool (F3), spv (F4), advance_sensitivity (F2b), split_sensitivity (F4a), run_model
+fusion/excel_export.py  builds the investor workbook (formulas, charts, formats)
 fusion/irr.py      IRR and NPV that behave like Excel's IRR(values, 0.01) and NPV
 app.py, ui_kit.py  Streamlit pages and styling
 charts.py          the 18 workbook charts (2 on F0, 16 on F6), series for series

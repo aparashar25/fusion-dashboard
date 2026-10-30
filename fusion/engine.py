@@ -783,7 +783,7 @@ def dashboard_views(res: dict) -> dict:
         "School": [na, p.school_total.sum(), na, na, na, na],
         "Goal (servicer)": [na, p.fees.sum(), na, na, na, na],
     }, index=["Cash put in ($)", "Cash received ($)", "Net profit ($)", "MOIC", "IRR (annualised)", "Share of capital"])
-    tiers_txt = "; ".join(f"T{i + 1} {p_:.0%} to {t:.2f}x" if inp.target_mode == "MOIC" else f"T{i + 1} {p_:.0%} to {t:.0%}"
+    tiers_txt = "; ".join(f"T{i + 1} {p_:.2%} to {t:.3f}x" if inp.target_mode == "MOIC" else f"T{i + 1} {p_:.2%} to {t:.2%}"
                           for i, (p_, t) in enumerate(d["tiers"]))
     settings = (f"Targets: {inp.target_mode} | after last tier: {inp.after_last_tier} | capital: {inp.capital_basis} | "
                 f"promote: {'ON' if inp.promote else 'OFF'} | recycling: {'ON' if inp.recycling else 'OFF'} | "

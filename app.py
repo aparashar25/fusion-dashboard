@@ -1,7 +1,7 @@
 """Fusion Loans deal dashboard: every tab of LoanAmerica_Model v4, live in the browser.
 Run with:  streamlit run app.py"""
 from __future__ import annotations
-import json, tempfile
+import json, re, tempfile
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -33,9 +33,48 @@ _st_dataframe = getattr(st, "_original_dataframe", st.dataframe)   # keep the or
 st._original_dataframe = _st_dataframe
 
 
+# Key figures (totals, MOIC, IRR, net profit, net collections ...) are bold and highlighted in every table;
+# check cells are coloured OK / WARNING / CHECK.
+KEY_ROW = re.compile(r"MOIC|IRR|^total|\btotal\b|net profit|net collections|investor cash received|effective advance rate|"
+                     r"peak debt|cumulative net cash flow|equity called|distributions$|^distributions|share of distributions", re.I)
+SKIP_ROW = re.compile(r"share of capital|^check|helper|step size|steps either|^change in|target in force|in force|^total investors \(ocm|^loan america \(sponsor\)$", re.I)
+
+
+def _highlight(df: pd.DataFrame):
+    hl = "rgba(111,168,220,0.16)" if ui_kit.MODE == "dark" else "rgba(36,82,122,0.08)"
+    if "Line" in df.columns:
+        labels = df["Line"].astype(str)
+    elif df.index.dtype == object:
+        labels = pd.Series(df.index.astype(str), index=df.index)
+    else:
+        labels = df.iloc[:, 0].astype(str) if len(df.columns) else pd.Series([], dtype=str)
+    key = labels.map(lambda s: bool(KEY_ROW.search(s)) and not SKIP_ROW.search(s)).values
+
+    def rows(row):
+        i = df.index.get_loc(row.name)
+        i = i if isinstance(i, int) else 0
+        return [f"font-weight: 700; background-color: {hl}" if key[i] else "" for _ in row]
+
+    def cells(v):
+        if v in ("OK", "Ties"):
+            return f"color: {ui_kit.OK_C}; font-weight: 700"
+        if v == "WARNING":
+            return f"color: {ui_kit.WARN_C}; font-weight: 700"
+        if v == "CHECK":
+            return f"color: {ui_kit.BAD_C}; font-weight: 700"
+        return ""
+    sty = df.style.apply(rows, axis=1).map(cells)
+    totals = [c for c in df.columns if str(c).startswith("Total") or str(c) in ("Blended", "Total / WA")]
+    if totals:
+        sty = sty.set_properties(subset=totals, **{"font-weight": "700"})
+    return sty
+
+
 def _dataframe(data=None, *args, **kwargs):
     if isinstance(data, pd.DataFrame):
         data = _arrow_safe(data)
+        if not data.index.has_duplicates and len(data) <= 400:
+            data = _highlight(data)
     return _st_dataframe(data, *args, **kwargs)
 
 
@@ -68,8 +107,8 @@ for _fn in ["markdown", "number_input", "toggle", "selectbox", "radio", "date_in
 BASE = ROOT / "scenarios" / "base_case_v4.json"
 LAB = json.loads((ROOT / "fusion" / "excel_labels.json").read_text())
 st.set_page_config(page_title="Fusion Loans deal model", layout="wide", initial_sidebar_state="expanded")
-# light or dark, following the app theme (menu > Settings > Theme)
-ui_kit.apply_mode(getattr(st.context.theme, "type", None) or "light")
+# dark palette for cards, rail and charts, matching the dark app theme
+ui_kit.apply_mode("dark")   # the app always opens in dark mode (.streamlit/config.toml)
 from ui_kit import *  # noqa: E402  (palette for this run)
 st.markdown(CSS, unsafe_allow_html=True)
 
@@ -108,8 +147,10 @@ def fmt_cell(v, kind):
         return "" if v is None else v
     if isinstance(v, (float, np.floating)) and not np.isfinite(v):
         return "n.a."
-    return {"$": lambda x: f"{x:,.0f}", "x": lambda x: f"{x:,.2f}x", "%": lambda x: f"{x * 100:,.2f}%",
-            "p": lambda x: f"{x:,.6f}", "i": lambda x: f"{x:,.0f}", "r": lambda x: f"{x:,.4f}"}[kind](v)
+    if kind == "d" and abs(v) >= 1e11:
+        return "never"          # a tier whose investor % is 0 never completes (the workbook uses 1E+12)
+    return {"$": fdollar, "d": fd, "x": fx, "%": fp, "p": lambda x: f"{x:,.3f}", "r": lambda x: f"{x:,.3f}",
+            "i": lambda x: f"{x:,.0f}", "g": lambda x: f"{x:,.0f}" if float(x).is_integer() else f"{x:,.3f}"}[kind](v)
 
 
 def wide(rows: list, index, total_col=True, height=None):
@@ -165,6 +206,7 @@ def sidebar():
                 clear_widget_state(); st.rerun()
         if st.button("Reset to the base case", width="stretch"):
             st.session_state.inp = base_inputs(); clear_widget_state(); st.rerun()
+        excel_export_button()
         st.download_button("Download inputs (JSON)", inp.to_json(), file_name="fusion_inputs.json", width="stretch")
         up = st.file_uploader("Load inputs from JSON or the Excel model", type=["json", "xlsx"])
         if up is not None and st.session_state.get("_last_upload") != up.name + str(up.size):
@@ -183,7 +225,31 @@ def sidebar():
                     f"<b>{r['input_status']}</b><br><span class='dot' style='background:{status_color(r['model_status'])}'>"
                     f"</span>Model <b>{r['model_status']}</b>", unsafe_allow_html=True)
         note("Every number is recalculated in Python each time an input changes.")
-        note("Light or dark: menu (top right) > Settings > Choose app theme. By default it follows your computer's setting.")
+
+
+def excel_export_button():
+    """Build the investor workbook (live Excel formulas) for the scenario on screen and download it."""
+    import datetime as _dt
+    from fusion.excel_export import build_workbook
+    snap = inp.to_json()                                   # snapshot now; the build runs on its own thread
+    saved = dict(st.session_state.saved)
+    sheet3 = st.session_state.get("sheet3")
+    notes = st.session_state.get("notes")
+
+    def make():
+        return build_workbook(Inputs.from_json(snap), {k: Inputs.from_json(v) for k, v in saved.items()}, sheet3, notes)
+    fname = f"Fusion_Loans_deal_model_{_dt.date.today().isoformat()}.xlsx"
+    mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    try:
+        st.download_button("Export to Excel workbook", data=make, file_name=fname, mime=mime, type="primary", width="stretch",
+                           help="Builds a workbook with live Excel formulas for the scenario on screen (about 100,000 formulas, a few seconds).",
+                           on_click="ignore")
+    except Exception:                                      # older Streamlit without deferred downloads: build first, then download
+        if st.button("Export to Excel workbook", type="primary", width="stretch"):
+            with st.spinner("Building the workbook"):
+                st.session_state._xlsx = make()
+        if st.session_state.get("_xlsx"):
+            st.download_button("Download the workbook", st.session_state._xlsx, file_name=fname, mime=mime, width="stretch")
 
 
 def _load_workbook_notes(path):
@@ -239,6 +305,7 @@ def page_notes():
 # =========================================================================== F0
 def page_f0():
     r = results()
+    fx = lambda v, d=None: "n.a." if v is None or not np.isfinite(v) else f"{v:,.2f}x"   # overview: MOIC to 2 decimals
     st.title("Fusion Loans: deal overview")
     status_rail(r)
     R, PS, S, A = r["spv"]["returns"], r["pool"]["summary"], r["ue"]["summary"], r["asset"]["table"]
@@ -323,7 +390,7 @@ def page_f0():
     c1, c2 = st.columns(2)
     c1.plotly_chart(C.running_moic(r, 96, la_right=True, title="Running MOIC by party"), width="stretch")
     c2.plotly_chart(C.party_equity_vs_dist(r, "SPV", 96, with_line=False, title="SPV: equity called (below 0) vs distributions (above 0)"), width="stretch")
-    note("All 16 charts are on the Charts page. Switch light / dark with the menu (top right) > Settings > Choose app theme.")
+    note("All 16 charts are on the Charts page.")
 
 
 # =========================================================================== F1
@@ -374,12 +441,12 @@ def page_f1():
         inp.curve_family = list(ed["Curve family"])
         inp.loan_size = [float(v) for v in ed["Average loan size, face ($)"]]
         kv([("Curve row in the base curves", [i + 1 for i in d["fam_idx"]] + [""], "i"),
-            ("Monthly payment per $1 of face (level amortisation)", list(d["pmt"]) + [None], "p"),
+            ("Monthly payment per $1 of face (level amortisation)", list(d["pmt"]) + [None], "d"),
             ("APR, weighted", [None] * 4 + [d["wa_apr"]], "%"),
-            ("Weighted-average term (months)", [None] * 4 + [d["wa_term"]], "r"),
+            ("Weighted-average term (months)", [None] * 4 + [d["wa_term"]], "g"),
             ("Term mix total", [None] * 4 + [float(sum(inp.mix))], "%"),
             ("Average loan size, face-weighted ($)", [None] * 4 + [d["avg_loan"]], "$"),
-            ("Number of loans in the program by term", list(d["loans_by_term"]) + [sum(d["loans_by_term"])], "$")], cols=T + ["Total / WA"])
+            ("Number of loans in the program by term", list(d["loans_by_term"]) + [sum(d["loans_by_term"])], "i")], cols=T + ["Total / WA"])
         st.markdown(f"Check: term mix sums to 100%: **{chk['term_mix']}**")
         st.markdown("### 2b. Credit: loss / prepayment multipliers, recoveries, payment stop")
         c = st.columns(4)
@@ -424,10 +491,10 @@ def page_f1():
         adf = pd.DataFrame({"Advance rate by term: cash paid to the school per $1 of face (%)": [a * 100 for a in inp.advance]}, index=T).T
         aed = st.data_editor(adf, key="w_adv", width="stretch")
         inp.advance = [float(v) / 100 for v in aed.iloc[0]]
-        kv([("Advance rate", list(d["adv"]) + [d["F71"]], "p"),
-            ("Upfront fees per $1 of face by term (active upfront fees)", list(d["upfront"]) + [d["F72"]], "p"),
-            ("Investor outlay per $1 of face at month 0", list(d["outlay"]) + [d["F73"]], "p"),
-            ("Investor outlay per $1 used for the target test", list(d["target_outlay"]) + [float(np.dot(d["target_outlay"], d["mix"]))], "p")],
+        kv([("Advance rate (cash to the school per $1 of face)", list(d["adv"]) + [d["F71"]], "d"),
+            ("Upfront fees per $1 of face by term (active upfront fees)", list(d["upfront"]) + [d["F72"]], "d"),
+            ("Investor outlay per $1 of face at month 0", list(d["outlay"]) + [d["F73"]], "d"),
+            ("Investor outlay per $1 used for the target test", list(d["target_outlay"]) + [float(np.dot(d["target_outlay"], d["mix"]))], "d")],
            cols=T + ["Total / WA"])
         st.markdown("### 3b. Fee table (add a fee: fill a row and set it ON)")
         fdf = pd.DataFrame([{"Active": f.active, "Fee name": f.name, "Paid to": f.paid_to, "Type": f.type or "",
@@ -448,10 +515,10 @@ def page_f1():
             k_ = 0.0
             if ok == "OK" and f.type == "Upfront":
                 k_ = f.rate * (1 if f.basis == "Face" else d["F71"]) if f.method == "%" else (f.fixed / d["avg_loan"] if d["avg_loan"] else 0)
-            kdf.append([ok, f"{k_:.6f}"])
+            kdf.append([ok, fd(k_)])
         st.dataframe(pd.DataFrame(kdf, columns=["Row check", "Upfront /$1 (at the mix-weighted advance and loan size)"],
                                   index=pd.Index(range(1, 11), name="Fee #")).T, width="stretch")
-        kv([("Total upfront fees per $1 of face (paid by investor at month 0)", [d["F72"]], "p"),
+        kv([("Total upfront fees per $1 of face (paid by investor at month 0)", [d["F72"]], "d"),
             ("Number of active fees", [sum(1 for x in d["fee_ok"] if x == "OK")], "i"),
             ("Check: every active fee row valid; loan sizes positive", [chk["fee_table"]], "p"),
             ("Across-life coefficient: % of monthly collections", [d["c_coll"]], "%"),
@@ -478,9 +545,9 @@ def page_f1():
                 order += 1
             inv_if = act[i][0] if i < len(act) else None
             tgt_if = act[i][1] if i < len(act) else None
-            helper.append([fp(1 - t.investor_pct, 1) if t.investor_pct is not None else "", ok, order if ok == "OK" else "", i + 1,
-                           fp(inv_if, 1) if inv_if is not None else "",
-                           ("" if tgt_if is None else (f"{tgt_if:.2f}x" if inp.target_mode == "MOIC" else fp(tgt_if, 1))),
+            helper.append([fp(1 - t.investor_pct) if t.investor_pct is not None else "", ok, str(order) if ok == "OK" else "", str(i + 1),
+                           fp(inv_if) if inv_if is not None else "",
+                           ("" if tgt_if is None else (fx(tgt_if) if inp.target_mode == "MOIC" else fp(tgt_if))),
                            "OK" if tgt_if is not None else ""])
         st.dataframe(pd.DataFrame(helper, index=pd.Index(range(1, 11), name="Tier"),
                                   columns=["School %", "Row check", "Active order", "Order #", "Investor % in force",
@@ -581,17 +648,17 @@ def page_f1():
 
 # =========================================================================== F2
 BLOCK_ROWS = [  # (excel row, df column, kind)
-    (89, "sched_balance", "p"), (90, "sched_factor", "p"), (91, "loss_curve", "p"), (92, "smm", "p"), (93, "opening", "p"),
-    (94, "charge_offs", "p"), (95, "surviving", "p"), (96, "interest", "p"), (97, "sched_principal", "p"), (98, "prepaid", "p"),
-    (99, "ending", "p"), (100, "active_loans", "p"), (101, "recoveries", "p"), (102, "missed", "p"), (103, "prepay_survival", "p"),
-    (104, "survivors_stop_off", "p"), (105, "defaulting_balance", "p"), (106, "defaulted_face", "p"), (107, "removed", "p"),
-    (108, "gross", "p"), (109, "fees", "p"), (110, "net", "p")] + \
-    [(112 + i, f"need_tier_{i + 1}", "p") for i in range(10)] + [(122 + i, f"breakpoint_{i}", "p") for i in range(11)] + \
-    [(133 + i, f"alloc_tier_{i + 1}", "p") for i in range(10)] + [(143, "alloc_after_last", "p"), (144, "investor", "p"), (145, "school", "p"),
+    (89, "sched_balance", "d"), (90, "sched_factor", "%"), (91, "loss_curve", "%"), (92, "smm", "%"), (93, "opening", "d"),
+    (94, "charge_offs", "d"), (95, "surviving", "d"), (96, "interest", "d"), (97, "sched_principal", "d"), (98, "prepaid", "d"),
+    (99, "ending", "d"), (100, "active_loans", "%"), (101, "recoveries", "d"), (102, "missed", "d"), (103, "prepay_survival", "%"),
+    (104, "survivors_stop_off", "%"), (105, "defaulting_balance", "d"), (106, "defaulted_face", "d"), (107, "removed", "d"),
+    (108, "gross", "d"), (109, "fees", "d"), (110, "net", "d")] + \
+    [(112 + i, f"need_tier_{i + 1}", "d") for i in range(10)] + [(122 + i, f"breakpoint_{i}", "d") for i in range(11)] + \
+    [(133 + i, f"alloc_tier_{i + 1}", "d") for i in range(10)] + [(143, "alloc_after_last", "d"), (144, "investor", "d"), (145, "school", "d"),
     (146, "tiers_met", "i"), (147, "tier_in_force", "i"), (148, "tier_in_force_label", "p"), (149, "investor_pct_in_force", "%"),
-    (150, "target_hit_flag", "p"), (151, "need_next", "p"), (153, "investor_cf", "p"), (154, "investor_cum", "p"),
-    (155, "moic_running", "r"), (156, "irr_running", "%"), (157, "school_cf", "p"), (158, "school_cum", "p"),
-    (159, "upfront_fees_paid", "p"), (160, "across_life_fees_paid", "p")]
+    (150, "target_hit_flag", "p"), (151, "need_next", "d"), (153, "investor_cf", "d"), (154, "investor_cum", "d"),
+    (155, "moic_running", "x"), (156, "irr_running", "%"), (157, "school_cf", "d"), (158, "school_cum", "d"),
+    (159, "upfront_fees_paid", "d"), (160, "across_life_fees_paid", "d")]
 SUM_ROWS = {"charge_offs", "interest", "sched_principal", "prepaid", "recoveries", "missed", "removed", "gross", "fees", "net",
             "investor", "school", "investor_cf", "school_cf", "upfront_fees_paid", "across_life_fees_paid"} | \
            {f"alloc_tier_{i}" for i in range(1, 11)} | {"alloc_after_last"}
@@ -608,17 +675,17 @@ def page_f2():
     st.markdown("## Summary (per $1 of face)")
     g = lambda k: [S.loc[k, n] for n in names]
     L = lambda n: LBL("F2_summary", n)
-    rows = [(L(5), g("Term (months)"), "r"), (L(6), g("Mix weight"), "%"), (L(7), g("APR"), "%"),
-            (L(8), g("Advance paid to school"), "p"), (L(9), g("Upfront fees"), "p"), (L(10), g("Investor outlay"), "p"),
-            (L(11), g("Gross collections"), "p"), (L(12), g("Across-life fees"), "p"), (L(13), g("Net collections"), "p"),
-            (L(14), g("Charge-offs"), "p"), (L(15), g("Missed payments"), "p"), (L(16), g("Investor cash received"), "p"),
-            (L(17), g("Investor MOIC"), "x"), (L(18), g("Investor IRR"), "%"), (L(19), g("Tiers hit"), "p"),
-            (L(20), g("Month tier 1 hit"), "i"), (L(21), [""] * 5, "p"),
-            (L(22), g("School day-0 advance"), "p"), (L(23), g("School collections"), "p"), (L(24), g("School total (undiscounted)"), "p"),
-            (L(25), g("School PV of collections"), "p"), (L(26), g("School total (PV)"), "p"), (L(27), g("School day-0 advance"), "%"),
+    rows = [(L(5), g("Term (months)"), "g"), (L(6), g("Mix weight"), "%"), (L(7), g("APR"), "%"),
+            (L(8), g("Advance paid to school"), "d"), (L(9), g("Upfront fees"), "d"), (L(10), g("Investor outlay"), "d"),
+            (L(11), g("Gross collections"), "d"), (L(12), g("Across-life fees"), "d"), (L(13), g("Net collections"), "d"),
+            (L(14), g("Charge-offs"), "%"), (L(15), g("Missed payments"), "d"), (L(16), g("Investor cash received"), "d"),
+            (L(17), g("Investor MOIC"), "x"), (L(18), g("Investor IRR"), "%"), (L(19), g("Tiers hit"), "d"),
+            (L(20), g("Month tier 1 hit"), "i"), (L(21), [""] * 5, "d"),
+            (L(22), g("School day-0 advance"), "d"), (L(23), g("School collections"), "d"), (L(24), g("School total (undiscounted)"), "d"),
+            (L(25), g("School PV of collections"), "d"), (L(26), g("School total (PV)"), "d"), (L(27), g("School day-0 advance"), "%"),
             (L(28), g("School collections"), "%"), (L(29), g("School total (undiscounted)"), "%"), (L(30), g("School PV of collections"), "%"),
             (L(31), g("School total (PV)"), "%"), (L(32), g("Effective discount (undiscounted)"), "%"), (L(33), g("Effective discount (PV)"), "%"),
-            (L(34), [inp.school_pv_rate] * 5, "%"), (L(35), list(r["ue"]["checks"].values()), "p")]
+            (L(34), [inp.school_pv_rate] * 5, "%"), (L(35), list(r["ue"]["checks"].values()), "d")]
     kv(rows, cols=names, height=1130)
 
     st.markdown("## Tier summary: loan age each target is hit, and cash within each tier")
@@ -630,21 +697,21 @@ def page_f2():
     for i in range(10):
         if i < d["n_tiers"]:
             pct, tgt = d["tiers"][i]
-            line = [fp(pct, 1), f"{tgt:.2f}x MOIC" if inp.target_mode == "MOIC" else f"{tgt:.1%} IRR"]
+            line = [fp(pct), f"{fx(tgt)} MOIC" if inp.target_mode == "MOIC" else f"{fp(tgt)} IRR"]
             for k in range(4):
                 df = blocks[k]["df"]; met = df.tiers_met.values
                 age = int(np.argmax(met >= i + 1)) if (met >= i + 1).any() else None
                 a_ = df[f"alloc_tier_{i + 1}"].sum()
-                line += [age if age is not None else "Not hit", f"{pct * a_:.6f}", f"{(1 - pct) * a_:.6f}",
-                         fx(df.moic_running.values[age], 4) if age is not None else "", fp(df.irr_running.values[age], 2) if age is not None else ""]
+                line += [str(age) if age is not None else "Not hit", fd(pct * a_), fd((1 - pct) * a_),
+                         fx(df.moic_running.values[age]) if age is not None else "", fp(df.irr_running.values[age]) if age is not None else ""]
             rows.append((f"Tier {i + 1}", line))
         else:
             rows.append((f"Tier {i + 1} (off)", [""] * len(cols)))
-    after, tot = [fp(d["after_pct"], 1), ""], ["", ""]
+    after, tot = [fp(d["after_pct"]), ""], ["", ""]
     for k in range(4):
         df = blocks[k]["df"]; a_ = df["alloc_after_last"].sum()
-        after += ["", f"{d['after_pct'] * a_:.6f}", f"{(1 - d['after_pct']) * a_:.6f}", "", ""]
-        tot += ["", f"{df.investor.sum():.6f}", f"{df.school.sum():.6f}", "Ties" if r["ue"]["checks"][f"{inp.terms[k]}m"] == "OK" else "CHECK", ""]
+        after += ["", fd(d['after_pct'] * a_), fd((1 - d['after_pct']) * a_), "", ""]
+        tot += ["", fd(df.investor.sum()), fd(df.school.sum()), "Ties" if r["ue"]["checks"][f"{inp.terms[k]}m"] == "OK" else "CHECK", ""]
     rows += [("After last tier", after), ("Total (ties to investor / school share)", tot)]
     st.dataframe(pd.DataFrame([x[1] for x in rows], index=[x[0] for x in rows], columns=cols), width="stretch")
 
@@ -656,30 +723,30 @@ def page_f2():
             (76, "school_cf"), (77, "school_cum")]
     items = []
     for rr, col in brow:
-        kind = "%" if col == "irr_running" else ("r" if col == "moic_running" else "p")
+        kind = "%" if col == "irr_running" else ("x" if col == "moic_running" else "d")
         tot = (float(bl[col].sum()) if col in SUM_ROWS else float(bl[col].values[-1]) if col in LAST_ROWS else
                S.loc["Investor IRR", "Blended"] if col == "irr_running" else None)
         items.append((LBL("F2_blended", rr), bl[col].values, kind, tot))
     c78 = (bl.investor + bl.school - bl.net).round(9)
-    items.append((LBL("F2_blended", 78), c78.values, "p", float(c78.abs().sum())))
-    items.append((LBL("F2_blended", 80), bl["cost_basis"].values, "p"))
+    items.append((LBL("F2_blended", 78), c78.values, "d", float(c78.abs().sum())))
+    items.append((LBL("F2_blended", 80), bl["cost_basis"].values, "d"))
     wide(items, bl.index, height=780)
 
     st.markdown("## Term blocks: the full monthly engine")
     pick = st.radio("Term", [f"{t}m" for t in inp.terms], horizontal=True, label_visibility="collapsed")
     k = [f"{t}m" for t in inp.terms].index(pick)
     df = blocks[k]["df"]
-    kv([(LBL("F2_block", 85), [inp.terms[k]], "i"), (LBL("F2_block", 86), [d["r"][k]], "p"),
-        (LBL("F2_block", 87), [d["pmt"][k]], "p"), (LBL("F2_block", 88), [inp.mix[k]], "%")])
+    kv([(LBL("F2_block", 85), [inp.terms[k]], "i"), (LBL("F2_block", 86), [d["r"][k]], "%"),
+        (LBL("F2_block", 87), [d["pmt"][k]], "d"), (LBL("F2_block", 88), [inp.mix[k]], "%")])
     items = []
     for rr, col, kind in BLOCK_ROWS:
         tot = (float(df[col].sum()) if col in SUM_ROWS else float(df[col].values[-1]) if col in LAST_ROWS else
                S.loc["Investor IRR", pick] if col == "irr_running" else None)
         items.append((LBL("F2_block", rr), df[col].values, kind, tot))
     c161 = (df.investor + df.school - df.net).round(9)
-    items.append((LBL("F2_block", 161), c161.values, "p", float(c161.abs().sum())))
+    items.append((LBL("F2_block", 161), c161.values, "d", float(c161.abs().sum())))
     c162 = round(df.removed.sum() + df.sched_principal.sum() + df.prepaid.sum() + df.ending.values[-1] - 1, 9)
-    items.append((LBL("F2_block", 162), [None] * len(df), "p", c162))
+    items.append((LBL("F2_block", 162), [None] * len(df), "d", c162))
     wide(items, df.index, height=900)
     st.download_button("Download this term block (CSV)", df.to_csv().encode(), file_name=f"F2_{pick}_block.csv")
 
@@ -714,18 +781,18 @@ def page_f2a():
          "from unit economics). SPV-level costs (other SPV fees, leverage, recycling) are excluded from both.")
     A = r["asset"]["table"]; names = list(A.columns)
     g = lambda k: [A.loc[k, n] for n in names]
-    kv([("Mix weight (% of face)", g("Mix weight"), "%"), ("Price paid to the school (advance)", g("Price paid (advance)"), "p"),
-        ("Gross collections (no fees)", g("Gross collections"), "p"), ("Investor cash received, gross", g("Investor cash, gross"), "p"),
+    kv([("Mix weight (% of face)", g("Mix weight"), "%"), ("Price paid to the school (advance)", g("Price paid (advance)"), "d"),
+        ("Gross collections (no fees)", g("Gross collections"), "d"), ("Investor cash received, gross", g("Investor cash, gross"), "d"),
         ("Investor MOIC, GROSS (pre-fees)", g("Investor MOIC, gross"), "x"), ("Investor IRR, GROSS (pre-fees, annualised)", g("Investor IRR, gross"), "%"),
         ("Investor MOIC, NET (after fees; loan economics)", g("Investor MOIC, net"), "x"),
         ("Investor IRR, NET (after fees; loan economics)", g("Investor IRR, net"), "%"),
         ("Fee drag on investor MOIC (gross − net)", g("Fee drag on MOIC"), "x"),
         ("School total received, GROSS (advance + share of gross collections, % of face)", g("School total, gross"), "%"),
         ("School total received, NET (after fees; loan economics)", g("School total, net"), "%"),
-        ("Check: gross investor + school share − gross collections (0)", [0.0] * 4 + [0.0 if r["asset"]["check"] == "OK" else 1.0], "p")],
+        ("Check: gross investor + school share − gross collections (0)", [0.0] * 4 + [0.0 if r["asset"]["check"] == "OK" else 1.0], "d")],
        cols=names)
     st.markdown("### Blended gross investor cash flow (mix-weighted; for the blended IRR)")
-    wide([("Investor cash flow, gross, blended", r["asset"]["gross_cf_blended"], "p", float(r["asset"]["gross_cf_blended"].sum()))], range(61))
+    wide([("Investor cash flow, gross, blended", r["asset"]["gross_cf_blended"], "d", float(r["asset"]["gross_cf_blended"].sum()))], range(61))
     extras_header()
     c1, c2 = st.columns(2)
     c1.plotly_chart(bar_fig(names, {"Gross": A.loc["Investor MOIC, gross"], "Net": A.loc["Investor MOIC, net"]}, "Investor MOIC, gross vs net",
@@ -873,7 +940,7 @@ def page_f4():
         (LBL("F4", 9), [1 - sp["la_share"], None, None], "%"), (LBL("F4", 10), ["ON" if inp.promote else "OFF", "", ""], "p"),
         (LBL("F4", 11), sp["monthly_hurdles"], "%"), (LBL("F4", 12), sp["effective_la_shares"], "%"),
         ("Check: effective Loan America shares within 0-100%", [sp["checks"]["promote_shares"], "", ""], "p"),
-        (LBL("F4", 13), [sp["checks"]["waterfall"], "", ""], "p")], cols=["B", "C", "D"])
+        (LBL("F4", 13), [sp["checks"]["waterfall"], "", ""], "p")], cols=["Value / 1st tier", "2nd tier", "3rd tier"])
     st.markdown("### 2. Returns by party")
     T = sp["tiers"]
     rows = [(LBL("F4", 15), R.loc["Share of capital"], "%"), (LBL("F4", 16), R.loc["Equity called"], "$"), (LBL("F4", 17), R.loc["Distributions"], "$"),
@@ -893,7 +960,7 @@ def page_f4():
           (LBL("F4", 46), w.t3, "$", float(w.t3.sum())), (LBL("F4", 47), w.hb4, "$"), (LBL("F4", 48), w.t4, "$", float(w.t4.sum())),
           (LBL("F4", 49), w.t5, "$", float(w.t5.sum())), (LBL("F4", 50), w.ocm, "$", float(w.ocm.sum())), (LBL("F4", 51), w.la, "$", float(w.la.sum())),
           (LBL("F4", 52), w.hb3 - w.ocm, "$"), (LBL("F4", 53), w.hb4 - w.ocm, "$"),
-          (LBL("F4", 54), [("" if x == 0 else x) for x in w.highest_tier], "p")], M)
+          (LBL("F4", 54), [("" if x == 0 else x) for x in w.highest_tier], "i")], M)
     st.markdown("### 5. Loan America distributions by tier")
     c61 = (w.la_t12 + w.la_t3 + w.la_t4 + w.la_t5 - w.la).round(4)
     wide([(LBL("F4", 57), w.la_t12, "$", float(w.la_t12.sum())), (LBL("F4", 58), w.la_t3, "$", float(w.la_t3.sum())),
@@ -903,7 +970,7 @@ def page_f4():
     c67 = (w.ocm_net + w.la_net - w.total_net).round(4)
     wide([(LBL("F4", 64), w.ocm_net, "$", float(w.ocm_net.sum())), (LBL("F4", 65), w.la_net, "$", float(w.la_net.sum())),
           (LBL("F4", 66), w.total_net, "$", float(w.total_net.sum())), (LBL("F4", 67), c67, "$", float(c67.abs().sum())),
-          (LBL("F4", 68), w.ocm_moic_running, "r"), (LBL("F4", 69), w.la_moic_running, "r"),
+          (LBL("F4", 68), w.ocm_moic_running, "x"), (LBL("F4", 69), w.la_moic_running, "x"),
           (LBL("F4", 70), w.ocm_irr_running, "%"), (LBL("F4", 71), w.la_irr_running, "%"),
           (LBL("F4", 73), w.debt_recap, "$", float(w.debt_recap.sum()))], M)
     st.markdown("### 7. Yearly view: equity in and distributions out by party (calendar years)")
@@ -927,7 +994,7 @@ def page_f4():
     st.markdown("### 8. Distributions over time: OCM vs Loan America (pro rata vs promote)")
     wide([(LBL("F4", 99), w.ocm, "$", float(w.ocm.sum())), (LBL("F4", 100), w.la_pro_rata, "$", float(w.la_pro_rata.sum())),
           (LBL("F4", 101), w.la_promote, "$", float(w.la_promote.sum())), (LBL("F4", 102), w.la_share_month, "%"),
-          (LBL("F4", 103), [("" if x == 0 else x) for x in w.highest_tier], "p"), (LBL("F4", 104), w.ocm_cum_dist, "$"),
+          (LBL("F4", 103), [("" if x == 0 else x) for x in w.highest_tier], "i"), (LBL("F4", 104), w.ocm_cum_dist, "$"),
           (LBL("F4", 105), w.la_cum_dist, "$")], M)
     st.markdown("### 9. Equity calls and distributions by party (SPV / OCM / Loan America)")
     c119 = ((-w.equity + w.ocm_equity + w.la_equity) + (w.dist - w.ocm - w.la_pro_rata - w.la_promote)).round(2)
@@ -1000,11 +1067,11 @@ def page_f5():
     note("Program PV discounts each month's school cash to the program start (month 1 = first purchase month); per $1 PV discounts to the loan's month 0.")
     st.markdown("### 3. Investor per $1 of face by term (before SPV fees, leverage and recycling)")
     P1 = f5["per1"]
-    kv([(P1.index[0], P1.iloc[0], "p"), (P1.index[1], P1.iloc[1], "p"), (P1.index[2], P1.iloc[2], "x"), (P1.index[3], P1.iloc[3], "%"),
+    kv([(P1.index[0], P1.iloc[0], "d"), (P1.index[1], P1.iloc[1], "d"), (P1.index[2], P1.iloc[2], "x"), (P1.index[3], P1.iloc[3], "%"),
         (P1.index[4], P1.iloc[4], "i")], cols=list(P1.columns))
     st.markdown("### 4. Monthly view (program level): cash by party and running returns")
     mv = f5["monthly"]
-    kinds = ["$"] * 6 + ["r"] * 3 + ["%"] * 3 + ["%"]
+    kinds = ["$"] * 6 + ["x"] * 3 + ["%"] * 3 + ["%"]
     wide([("Month end", [dd.isoformat() for dd in r["pool"]["monthly"].date], "p")] +
          [(c, mv[c], k, float(mv[c].sum()) if k == "$" else None) for c, k in zip(mv.columns, kinds)], mv.index)
     note("Charts for sections 1-4 are on the Charts page, section 1.")
