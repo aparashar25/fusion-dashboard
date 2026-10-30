@@ -1,0 +1,19 @@
+   [theme.light]
+   primaryColor = "#24527A"
+   backgroundColor = "#FFFFFF"
+   secondaryBackgroundColor = "#F4F6F9"
+   textColor = "#17202A"
+
+   [theme.dark]
+   primaryColor = "#6FA8DC"
+   backgroundColor = "#0F141A"
+   secondaryBackgroundColor = "#161B22"
+   textColor = "#E6EAF0"
+
+   [server]
+   headless = true
+   enableCORS = false
+   enableXsrfProtection = false
+
+   [browser]
+   gatherUsageStats = false
